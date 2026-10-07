@@ -8,6 +8,7 @@
 #include "AudioOutput.h"
 
 #include <Autolock.h>
+#include <Window.h>
 #include <Screen.h>
 #include <Bitmap.h>
 #include <ScrollBar.h>

@@ -67,7 +67,7 @@ FlagFlipNameLabelQuad WindowFlags[] =
 	{ B_NOT_MINIMIZABLE,			false,	"mini",		"Minimizable"							},
 	{ B_NOT_H_RESIZABLE,			false,	"hres",		"Horizontally Resizable"				},
 	{ B_NOT_V_RESIZABLE,			false,	"vres",		"Vertically Resizable"					},
-	{ MSG_WINDOW_ADD_MENU,			false,	"menus",	"Menu Bar"								},
+	{ (int32)MSG_WINDOW_ADD_MENU,			false,	"menus",	"Menu Bar"								},
 	{ B_OUTLINE_RESIZE,				true,	"roiw",		"Resize with Outline Instead of Window"	},
 	{ B_WILL_ACCEPT_FIRST_CLICK,	true,	"wafc",		"Will Accept First Click"				},
 	{ B_AVOID_FRONT,				true,	"avfr",		"Avoid Front"							},
@@ -470,7 +470,7 @@ uint32 WindowEditor::MakeBitmask(void)
 
 	for (uint32 i = 0; i < fFlagBoxes.size(); ++i)
 	{
-		if (WindowFlags[i].flag != MSG_WINDOW_ADD_MENU &&
+		if (WindowFlags[i].flag != (int32)MSG_WINDOW_ADD_MENU &&
 			WindowFlags[i].flip == fFlagBoxes[i]->Value())
 		{
 			bitmask |= WindowFlags[i].flag;

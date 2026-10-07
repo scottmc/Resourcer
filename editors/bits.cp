@@ -153,7 +153,7 @@ unsigned char* savedata(size_t *length,BView *bkgview) { //runs when window clos
 
 void messaging(BMessage *message,BView *bkgview) { //BMessages from window, to be passed here 'what' field must be a negative number
 	switch (message->what) {
-		case -200:
+		case (uint32)-200:
 			loadopenbox((BPView *)(bkgview->ChildAt(0)));
 			break;
 		case B_REFS_RECEIVED:

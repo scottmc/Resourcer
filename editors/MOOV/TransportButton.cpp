@@ -2,6 +2,7 @@
 #include <Debug.h>
 #include <MessageFilter.h>
 #include <Screen.h>
+#include <Window.h>
 
 #include <map>
 
@@ -21,7 +22,7 @@ public:
 	
 private:
 	TransportButton *owner;
-	map<uint32, BBitmap *> stash;
+	std::map<uint32, BBitmap *> stash;
 };
 
 BitmapStash::BitmapStash(TransportButton *owner)
@@ -44,7 +45,7 @@ BitmapStash::GetBitmap(uint32 signature)
 BitmapStash::~BitmapStash()
 {
 	// delete all the bitmaps
-	for (map<uint32, BBitmap *>::iterator i = stash.begin(); i != stash.end(); i++) 
+	for (std::map<uint32, BBitmap *>::iterator i = stash.begin(); i != stash.end(); i++) 
 		delete (*i).second;
 }
 

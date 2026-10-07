@@ -19,10 +19,10 @@
 #include "WIND.h"
 
 // Local Defines ---------------------------------------------------------------
-#define MSG_TEXT_CTRL_SET_MOD_MSG	-600
-#define MSG_TEXT_CTRL_SET_TEXT		-610
-#define MSG_TEXT_CTRL_SET_ALIGNMENT	-620
-#define MSG_TEXT_CTRL_SET_DIVIDER	-630
+#define MSG_TEXT_CTRL_SET_MOD_MSG	((uint32)-600)
+#define MSG_TEXT_CTRL_SET_TEXT		((uint32)-610)
+#define MSG_TEXT_CTRL_SET_ALIGNMENT	((uint32)-620)
+#define MSG_TEXT_CTRL_SET_DIVIDER	((uint32)-630)
 
 // Globals ---------------------------------------------------------------------
 

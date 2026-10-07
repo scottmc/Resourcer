@@ -137,7 +137,7 @@ status_t get_app_resource(type_code type,long id,void** buffer/*<-- do not initi
 }
 //------------------------------------------------------------------------------
 status_t get_app_resource(type_code type,const char *name,void** buffer/*<-- do not initialize*/,size_t *lengthFound) {
-	long id;
+	int32 id;
 	if (be_app->AppResources()->GetResourceInfo(type,name,&id,lengthFound) == false)
 		return B_ERROR;
 	*buffer = new unsigned char[*lengthFound];

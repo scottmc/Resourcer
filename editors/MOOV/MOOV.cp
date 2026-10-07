@@ -26,7 +26,7 @@ MediaView *v;
 BFilePanel *peterpan;
 
 class VideoFilter : public BRefFilter {
-	bool Filter(const entry_ref *ref,BNode *node, struct stat *st, const char *filetype) {
+	bool Filter(const entry_ref *ref,BNode *node, struct stat_beos *st, const char *filetype) {
 		BMimeType type(filetype);
 		if (BMimeType("video").Contains(&type))
 			return true;
@@ -86,10 +86,10 @@ void messaging(BMessage *msg,BView *bkgview) {
 	BRect rect;
 	float x,y;
 	switch (msg->what) {
-		case -100:
+		case (uint32)-100:
 			(new BAlert("about","MOOV Editor for Resourcer 3.0\nCore Code "B_UTF8_COPYRIGHT"1991-1999, Be, Inc.","OK"))->Go();
 			break;
-		case -200:
+		case (uint32)-200:
 			if (peterpan == NULL)
 				peterpan = new BFilePanel(B_OPEN_PANEL,new BMessenger(bkgview->Window()),NULL,0,false,NULL,new VideoFilter);
 			peterpan->Show();

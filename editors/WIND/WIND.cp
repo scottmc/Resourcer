@@ -90,7 +90,7 @@ class EditingWindow;
 BMessage *current;
 EditingWindow *editingwin;
 WindowEditor *wineditor;
-BWindow *main;
+BWindow *mainwin;
 window_feel danger_feel = B_NORMAL_WINDOW_FEEL;
 int32 track_over(void *view);
 
@@ -153,7 +153,7 @@ void loaddata(unsigned char* data,size_t length, BView* bkgview)
 {
 	resources = file;
 	startingup = false;
-	main = bkgview->Window();
+	mainwin = bkgview->Window();
 
 	//-------------Init Focus View & Window Options------
 	bkgview->Window()->SetFlags(B_NOT_H_RESIZABLE | B_NOT_ZOOMABLE |
@@ -169,12 +169,12 @@ void loaddata(unsigned char* data,size_t length, BView* bkgview)
 	if (length == 0)
 	{
 		wineditor = new WindowEditor(BRect(0, 0, 250, 330), "wineditpanel",
-									 main, editpanel);
+									 mainwin, editpanel);
 	}
 	else
 	{
 		wineditor = new WindowEditor(BRect(0, 0, 250, 330), "wineditpanel",
-									 main, editpanel, data);
+									 mainwin, editpanel, data);
 	}
 	tabs->AddTab(wineditor);
 	tabs->TabAt(1)->SetLabel("Window");
@@ -238,7 +238,7 @@ unsigned char* savedata(size_t* length, BView* bkgview)
 	{
 		detach = true;
 		WinEditor->Hide();
-		main->AddChild(WinEditor);
+		mainwin->AddChild(WinEditor);
 	}
 	if (WinEditor->ArchiveWindow(archive) != B_OK)
 	{

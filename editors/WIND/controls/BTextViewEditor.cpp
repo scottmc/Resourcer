@@ -19,19 +19,19 @@
 #include "WIND.h"
 
 // Local Defines ---------------------------------------------------------------
-#define MSG_TEXT_VIEW_AUTOINDENT		-200
-#define MSG_TEXT_VIEW_EDITABLE			-205
-#define MSG_TEXT_VIEW_SELECTABLE		-210
-#define MSG_TEXT_VIEW_STYLABLE			-215
-#define MSG_TEXT_VIEW_WORDWRAP			-220
-#define MSG_TEXT_VIEW_ALIGN_LEFT		-225
-#define MSG_TEXT_VIEW_ALIGN_RIGHT		-230
-#define MSG_TEXT_VIEW_ALIGN_CENTER		-235
-#define MSG_TEXT_VIEW_SET_COLOR_SPACE	-240
-#define MSG_TEXT_VIEW_DISALLOWED_CHARS	-245
-#define MSG_TEXT_VIEW_MAX_BYTES			-250
-#define MSG_TEXT_VIEW_TAB_WIDTH			-255
-#define MSG_TEXT_VIEW_TEXT_RECT			-260
+#define MSG_TEXT_VIEW_AUTOINDENT		((uint32)-200)
+#define MSG_TEXT_VIEW_EDITABLE			((uint32)-205)
+#define MSG_TEXT_VIEW_SELECTABLE		((uint32)-210)
+#define MSG_TEXT_VIEW_STYLABLE			((uint32)-215)
+#define MSG_TEXT_VIEW_WORDWRAP			((uint32)-220)
+#define MSG_TEXT_VIEW_ALIGN_LEFT		((uint32)-225)
+#define MSG_TEXT_VIEW_ALIGN_RIGHT		((uint32)-230)
+#define MSG_TEXT_VIEW_ALIGN_CENTER		((uint32)-235)
+#define MSG_TEXT_VIEW_SET_COLOR_SPACE	((uint32)-240)
+#define MSG_TEXT_VIEW_DISALLOWED_CHARS	((uint32)-245)
+#define MSG_TEXT_VIEW_MAX_BYTES			((uint32)-250)
+#define MSG_TEXT_VIEW_TAB_WIDTH			((uint32)-255)
+#define MSG_TEXT_VIEW_TEXT_RECT			((uint32)-260)
 
 // Globals ---------------------------------------------------------------------
 struct ColorSpaceInfo

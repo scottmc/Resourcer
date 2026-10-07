@@ -411,21 +411,21 @@ void messaging(BMessage *message,BView *bkgview) { //receives messages from wind
 	int32 newPage;
 	char hoober[35];
 	switch(message->what) {
-		case -100:
+		case (uint32)-100:
 			panel->Show();
 			break;
-		case -200:
+		case (uint32)-200:
 			sscanf(((ContainerView *)(bkgview->FindView("hex")))->Address->Text(),"%ld",&newPage);
 			if (newPage < 0)
 				break;
 			((ContainerView *)(bkgview->FindView("hex")))->GoToPage(newPage);
 			break;
-		case -300:
+		case (uint32)-300:
 			((ContainerView *)(bkgview->FindView("hex")))->GoToPage(((ContainerView *)(bkgview->FindView("hex")))->curPage + 1);
 			sprintf(hoober,"%ld",((ContainerView *)(bkgview->FindView("hex")))->curPage);
 			((ContainerView *)(bkgview->FindView("hex")))->Address->SetText(hoober);
 			break;
-		case -400:
+		case (uint32)-400:
 			((ContainerView *)(bkgview->FindView("hex")))->GoToPage(((ContainerView *)(bkgview->FindView("hex")))->curPage - 1);
 			sprintf(hoober,"%ld",((ContainerView *)(bkgview->FindView("hex")))->curPage);
 			((ContainerView *)(bkgview->FindView("hex")))->Address->SetText(hoober);

@@ -26,24 +26,24 @@
 #include "WIND.h"
 
 // Local Defines ---------------------------------------------------------------
-#define MSG_SLIDER_SET_BLOCK_THUMB			-700
-#define MSG_SLIDER_SET_TRI_THUMB			-701
-#define MSG_SLIDER_SET_HASH_NONE			-710
-#define MSG_SLIDER_SET_HASH_TOP_LEFT		-711
-#define MSG_SLIDER_SET_HASH_BOTTOM_RIGHT	-712
-#define MSG_SLIDER_SET_HASH_COUNT			-713
-#define MSG_SLIDER_SET_LIMIT_LABELS			-720
-#define MSG_SLIDER_SET_ORIENT_HORZ			-730
-#define MSG_SLIDER_SET_ORIENT_VERT			-731
-#define MSG_SLIDER_SET_MIN_VALUE			-740
-#define MSG_SLIDER_SET_MAX_VALUE			-741
-#define MSG_SLIDER_SET_INCREMENT			-742
-#define MSG_SLIDER_SET_MOD_MSG				-750
-#define MSG_SLIDER_SET_BAR_COLOR			-760
-#define MSG_SLIDER_SET_FILL_COLOR			-761
-#define MSG_SLIDER_USE_FILL_COLOR			-762
-#define MSG_SLIDER_SET_THICKNESS			-763
-#define MSG_SLIDER_SET_SNOOZE				-770
+#define MSG_SLIDER_SET_BLOCK_THUMB			((uint32)-700)
+#define MSG_SLIDER_SET_TRI_THUMB			((uint32)-701)
+#define MSG_SLIDER_SET_HASH_NONE			((uint32)-710)
+#define MSG_SLIDER_SET_HASH_TOP_LEFT		((uint32)-711)
+#define MSG_SLIDER_SET_HASH_BOTTOM_RIGHT	((uint32)-712)
+#define MSG_SLIDER_SET_HASH_COUNT			((uint32)-713)
+#define MSG_SLIDER_SET_LIMIT_LABELS			((uint32)-720)
+#define MSG_SLIDER_SET_ORIENT_HORZ			((uint32)-730)
+#define MSG_SLIDER_SET_ORIENT_VERT			((uint32)-731)
+#define MSG_SLIDER_SET_MIN_VALUE			((uint32)-740)
+#define MSG_SLIDER_SET_MAX_VALUE			((uint32)-741)
+#define MSG_SLIDER_SET_INCREMENT			((uint32)-742)
+#define MSG_SLIDER_SET_MOD_MSG				((uint32)-750)
+#define MSG_SLIDER_SET_BAR_COLOR			((uint32)-760)
+#define MSG_SLIDER_SET_FILL_COLOR			((uint32)-761)
+#define MSG_SLIDER_USE_FILL_COLOR			((uint32)-762)
+#define MSG_SLIDER_SET_THICKNESS			((uint32)-763)
+#define MSG_SLIDER_SET_SNOOZE				((uint32)-770)
 
 // Globals ---------------------------------------------------------------------
 

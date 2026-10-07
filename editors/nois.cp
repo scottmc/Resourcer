@@ -243,7 +243,7 @@ unsigned char* savedata(size_t *length,BView *bkgview) { //runs when window clos
 
 void messaging(BMessage *message,BView *bkgview) { //BMessages from window, to be passed here 'what' field must be a negative integer or B_REFS_RECEIVED
 	switch(message->what) {
-		case -500:
+		case (uint32)-500:
 			{
 				if (find_thread("playsound") >= B_OK)
 					break;
@@ -257,7 +257,7 @@ void messaging(BMessage *message,BView *bkgview) { //BMessages from window, to b
 				}
 			}
 			break;
-		case -700:
+		case (uint32)-700:
 			((BNBox *)(bkgview->ChildAt(0)))->panel->Show();
 			break;
 		case B_REFS_RECEIVED:

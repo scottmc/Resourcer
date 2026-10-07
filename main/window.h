@@ -1264,7 +1264,7 @@ void reswindow::MessageReceived(BMessage *message) {
 			#if __POWERPC__
 				(new BAlert("About...","Resourcer 3.0 for PowerPC\n"B_UTF8_COPYRIGHT"1999-2000 Nathan Whitehorn","OK"))->Go();
 			#endif
-			#if __INTEL__
+			#if !__POWERPC__
 				(new BAlert("About...","Resourcer 3.0 for Intel\n"B_UTF8_COPYRIGHT"1999-2000 Nathan Whitehorn","OK"))->Go();
 			#endif
 			break;

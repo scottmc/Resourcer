@@ -53,7 +53,7 @@ void MenuListItem::MarkAsOver(bool state,BOutlineListView *owner) {
 	owner->Invalidate(owner->ItemFrame(owner->IndexOf(this)));
 }
 //------------------------------------------------------------------------------
-void MenuListItem::DrawItem(BView *owner, BRect itemRect, bool drawEverything = false) {
+void MenuListItem::DrawItem(BView *owner, BRect itemRect, bool drawEverything) {
 	if (asover)
 		owner->SetLowColor(51,152,255);
 	owner->FillRect(itemRect,B_SOLID_LOW);
