@@ -5,3 +5,17 @@ Resourcer is an open-source resource editor for the BeOS. It contains editors fo
 ### News:
 
 Resourcer released under the BSD license.
+
+## Building
+
+On Haiku, with the development tools installed, run `make` in the top level
+folder. The result is in the `build` folder: the `Resourcer` application and
+an `editors` folder with one add-on per resource type. Resourcer finds its
+editors in the `editors` folder next to the application, so you can run
+`build/Resourcer` right where it is.
+
+* `make editor-TEXT` builds a single editor
+* `make app`, `make editors` and `make reslib` build just that part
+* `make clean` removes everything that was built
+
+The code is kept compatible with gcc2 (`x86_gcc2` hybrid builds of Haiku).

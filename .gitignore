@@ -1,0 +1,5 @@
+# Output of the top level Makefile
+/build/
+
+# Object directories created by the makefile-engine (objects.x86-gcc2-release, ...)
+objects.*/

@@ -78,7 +78,8 @@ RDEFS :=
 #		naming scheme you need to specify the path to the library
 #		and it's name
 #		library: my_lib.a entry: my_lib.a or path/my_lib.a
-LIBS := be translation stdc++.r4
+#	$(STDCPPLIBS) is "stdc++.r4" with gcc2 and "stdc++ supc++" with newer gcc
+LIBS := be translation $(STDCPPLIBS)
 
 #	specify additional paths to directories following the standard
 #	libXXX.so or libXXX.a naming scheme.  You can specify full paths
