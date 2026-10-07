@@ -1319,13 +1319,13 @@ void reswindow::MessageReceived(BMessage *message) {
 					ite = res->AddResource('MIMS',0,"BEOS:TYPE",0,NULL,true);
 			}
 			break;			
-		case -100:
+		case (uint32)-100:
 			new optwindow(true,NULL,'blah',this);
 			break;
-		case -200:
+		case (uint32)-200:
 			res->DeleteSelection();
 			break;
-		case -300:
+		case (uint32)-300:
 			{
 				DoubleItem *cura;
 				TypeItem *cur;
@@ -1343,14 +1343,14 @@ void reswindow::MessageReceived(BMessage *message) {
 				new optwindow(false,cura,cur->type,this);
 			}
 			break;
-		case -400:
+		case (uint32)-400:
 			copy(this);
 			Lock();
 			res->DeleteSelection();
 			if (IsLocked())
 				Unlock();
 			break;
-		case -500:
+		case (uint32)-500:
 			thread = spawn_thread(&copy,"copying",10,this);
 			if (thread < B_OK)
 				copy(this);
@@ -1370,11 +1370,11 @@ void reswindow::MessageReceived(BMessage *message) {
 				}
 			}
 			break;
-		case -800:
+		case (uint32)-800:
 			if (res->ItemAt(res->CurrentSelection())->OutlineLevel() == 2) 
 				((DoubleItem *)(res->ItemAt(res->CurrentSelection())))->Invoke(true);
 			break;
-		case -900:
+		case (uint32)-900:
 			thread = spawn_thread(&copytoattr,"copying",10,this);
 			if (thread < B_OK)
 				copytoattr(this);
