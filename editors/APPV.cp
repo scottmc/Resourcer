@@ -49,7 +49,7 @@ void loaddata(unsigned char *data,size_t length,BView *bkgview) {
 	version = new BTextControl(BRect(vers_width + dot_width,20,vers_width + dot_width + dot_width,40), "minor",".",buffer,NULL);
 	version->SetDivider(be_plain_font->StringWidth("."));
 	bkgview->AddChild(version);
-	char *states[6];
+	const char *states[6];
 	states[0] = "Development";
 	states[1] = "Alpha";
 	states[2] = "Beta";

@@ -58,8 +58,9 @@ class TypeItem : public BStringItem {
 				if (get_image_symbol(editor,"description",B_SYMBOL_TYPE_DATA,(void **)(&temp)) != B_NO_ERROR)
 					description = "Unknown";
 				else {
-					description = new char[strlen(temp) + 1];
-					strcpy(description,temp);
+					char *copy = new char[strlen(temp) + 1];
+					strcpy(copy,temp);
+					description = copy;
 				}
 			}
 			char *tempy = new char[10 + strlen(description)];
@@ -78,7 +79,7 @@ class TypeItem : public BStringItem {
 			 type = flipcode(type);
 		}
 		type_code type;
-		char *description;
+		const char *description;
 };
 
 class DoubleItem : public BListItem {

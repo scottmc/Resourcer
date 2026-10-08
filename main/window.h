@@ -4,7 +4,7 @@ int32 getdata(void *y);
 int32 copytoattr(void *y);
 int sortmenu(const void *first,const void *second);
 type_code code_from_MIME(char *MIME);
-char *MIME_from_code(type_code code);
+const char *MIME_from_code(type_code code);
 	
 class FillerView : public BView {
 	public:
@@ -225,8 +225,8 @@ type_code code_from_MIME(char *MIME) {
 	return type;
 }
 
-char *MIME_from_code(type_code code) {
-	char *MIME;
+const char *MIME_from_code(type_code code) {
+	const char *MIME;
 	switch (code) {
 		case 'CSTR':
 			MIME = "text/plain";
@@ -238,8 +238,11 @@ char *MIME_from_code(type_code code) {
 			MIME = "video";
 			break;
 		default:
-			MIME = new char[B_MIME_TYPE_LENGTH];
-			sprintf(MIME,"resource/%s",TypeItem(code).TypeCode());
+			{
+				char *resmime = new char[B_MIME_TYPE_LENGTH];
+				sprintf(resmime,"resource/%s",TypeItem(code).TypeCode());
+				MIME = resmime;
+			}
 			break;
 	}
 	return MIME;
@@ -842,7 +845,7 @@ class optwindow : public BWindow {
 				float size = sizer;
 				static char textsize[255];
 				char temp[20];
-				char *suffix;
+				const char *suffix;
 				if (size >= 1024*1024) {
 					size /= 1024*1024;
 					suffix = "MB";

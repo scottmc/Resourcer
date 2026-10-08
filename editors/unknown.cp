@@ -331,7 +331,7 @@ long openfile(void *m) {
 	BFile file(ma->ref,B_READ_ONLY);
 	unsigned char *data;
 	if (file.InitCheck() != B_OK) {
-		char *text;
+		const char *text;
 		switch (file.InitCheck()) {
 			case B_BAD_VALUE:
 				text = "The file panel was sent an incorrect value and the file could not be opened.";

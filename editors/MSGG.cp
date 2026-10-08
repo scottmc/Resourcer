@@ -47,7 +47,7 @@ class TypeItem : public BStringItem {
 		type_code Type(void);
 	private:
 		void SetDescription(void);
-		char *description;
+		const char *description;
 		type_code type;
 };
 
@@ -286,8 +286,9 @@ void TypeItem::SetDescription(void) {
 		if (get_image_symbol(editor,"description",B_SYMBOL_TYPE_DATA,(void **)(&temp)) != B_NO_ERROR)
 			description = "Unknown";
 		else {
-			description = new char[strlen(temp) + 1];
-			strcpy(description,temp);
+			char *copy = new char[strlen(temp) + 1];
+			strcpy(copy,temp);
+			description = copy;
 		}
 		char *tempy = new char[10 + strlen(description)];
 		sprintf(tempy,"%s (%s)",TypeAsString(),description);

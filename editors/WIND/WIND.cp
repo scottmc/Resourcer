@@ -100,7 +100,7 @@ const pattern STIPPLED = {{240,240,240,240,15,15,15,15}};
 class InterfaceItem : public BStringItem
 {
 	public:
-		InterfaceItem(char *label,BView *tocreate) : BStringItem(label)
+		InterfaceItem(const char *label,BView *tocreate) : BStringItem(label)
 		{
 			what_a_drag = new BMessage;
 			tocreate->ResizeToPreferred();
