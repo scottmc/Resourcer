@@ -1,3 +1,6 @@
+#ifndef RESOURCER_MAIN_RES_H
+#define RESOURCER_MAIN_RES_H
+
 enum list_state{
 	collapsed,
 	expanded
@@ -318,3 +321,5 @@ class restypeview : public BOutlineListView {
 		BStringItem *resources;
 		BStringItem *attributes;
 };
+
+#endif /* RESOURCER_MAIN_RES_H */

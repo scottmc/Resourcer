@@ -1,3 +1,6 @@
+#ifndef RESOURCER_MAIN_INCLUDES_H
+#define RESOURCER_MAIN_INCLUDES_H
+
 #include <app/Application.h>
 #include <app/Roster.h>
 #include <support/String.h>
@@ -26,3 +29,5 @@
 #include <support/ClassInfo.h>
 #include <translation/TranslatorRoster.h>
 #include <translation/BitmapStream.h>
+
+#endif /* RESOURCER_MAIN_INCLUDES_H */

@@ -1,3 +1,6 @@
+#ifndef RESOURCER_MAIN_CLASS_H
+#define RESOURCER_MAIN_CLASS_H
+
 #include <FindDirectory.h>
 #include <Path.h>
 bool launched;
@@ -62,3 +65,5 @@ class BRApplication : public BApplication {
 	char *retrieve;
 	bool saveas;
 };
+
+#endif /* RESOURCER_MAIN_CLASS_H */

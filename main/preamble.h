@@ -1,3 +1,6 @@
+#ifndef RESOURCER_MAIN_PREAMBLE_H
+#define RESOURCER_MAIN_PREAMBLE_H
+
 class reswindow;
 BRect find_center(uint32 width, uint32 height);
 BRect find_center(BRect rect,uint32 width, uint32 height);
@@ -83,3 +86,5 @@ int32 mbheight;
 int32 openmwindows;
 BMessage *itemLista;
 class pluginwindow;
+
+#endif /* RESOURCER_MAIN_PREAMBLE_H */

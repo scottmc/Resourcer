@@ -1,3 +1,6 @@
+#ifndef RESOURCER_RESLIB_CSTR_H
+#define RESOURCER_RESLIB_CSTR_H
+
 #include <interface/StringView.h>
 
 class _EXPORT ResourceStringView : public BStringView {
@@ -53,3 +56,5 @@ status_t ResourceStringView::Archive(BMessage *into, bool deep) const {
 	into->AddInt32("resid",id);
 	return stat;
 }
+
+#endif /* RESOURCER_RESLIB_CSTR_H */

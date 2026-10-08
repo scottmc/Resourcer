@@ -1,3 +1,6 @@
+#ifndef RESOURCER_RESLIB_BITS_H
+#define RESOURCER_RESLIB_BITS_H
+
 // extracts a BBitmap from a Resource
 
 //IMPORTANT!
@@ -141,3 +144,5 @@ BArchivable *ResImageView::Instantiate(BMessage *archive) {
 		return (new ResImageView(archive));
 	return NULL;
 }
+
+#endif /* RESOURCER_RESLIB_BITS_H */

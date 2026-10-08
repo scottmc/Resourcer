@@ -1,3 +1,6 @@
+#ifndef RESOURCER_EDITORS_MOOV_BITMAPS_H
+#define RESOURCER_EDITORS_MOOV_BITMAPS_H
+
 // #include "Bitmaps.h"
 
 const unsigned char eject16x11_raw[] = {
@@ -1710,3 +1713,5 @@ const unsigned char kPressedSkippingSkipForwardBitmapBits [] = {
 	0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,
 };
 
+
+#endif /* RESOURCER_EDITORS_MOOV_BITMAPS_H */

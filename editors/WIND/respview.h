@@ -1,3 +1,6 @@
+#ifndef RESOURCER_EDITORS_WIND_RESPVIEW_H
+#define RESOURCER_EDITORS_WIND_RESPVIEW_H
+
 
 
 class _EXPORT ResImageView : public BView {
@@ -108,3 +111,5 @@ BArchivable *ResImageView::Instantiate(BMessage *archive) {
 		return (new ResImageView(archive));
 	return NULL;
 }
+
+#endif /* RESOURCER_EDITORS_WIND_RESPVIEW_H */

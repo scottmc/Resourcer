@@ -1,3 +1,6 @@
+#ifndef RESOURCER_RESLIB_NOIS_H
+#define RESOURCER_RESLIB_NOIS_H
+
 //Extracts sounds from applications resources
 
 //IMPORTANT!
@@ -93,3 +96,5 @@ void decode4(unsigned char *buffer,void* toop) {
 	*three = *(buffer + 2);
 	*four = *(buffer + 3);
 }
+
+#endif /* RESOURCER_RESLIB_NOIS_H */

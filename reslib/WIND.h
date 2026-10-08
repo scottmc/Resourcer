@@ -1,3 +1,6 @@
+#ifndef RESOURCER_RESLIB_WIND_H
+#define RESOURCER_RESLIB_WIND_H
+
 #include <interface/Window.h>
 #include <app/Message.h>
 
@@ -33,3 +36,5 @@ BMessage *GetResWindowArchive(int32 id) {
 	archive->Unflatten(&res);
 	return archive;
 }
+
+#endif /* RESOURCER_RESLIB_WIND_H */

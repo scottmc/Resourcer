@@ -1,3 +1,6 @@
+#ifndef RESOURCER_MAIN_WINDOW_H
+#define RESOURCER_MAIN_WINDOW_H
+
 int32 copytoattr(void *y);
 int32 copy(void *y);
 int32 getdata(void *y);
@@ -1406,3 +1409,5 @@ void reswindow::MessageReceived(BMessage *message) {
 			BWindow::MessageReceived(message);
 		}
 	}
+
+#endif /* RESOURCER_MAIN_WINDOW_H */
