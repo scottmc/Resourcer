@@ -242,7 +242,7 @@ unsigned char* savedata(size_t* length, BView* bkgview)
 	}
 	if (WinEditor->ArchiveWindow(archive) != B_OK)
 	{
-		(new BAlert("yikes", "Archive is failing"B_UTF8_ELLIPSIS, "OK"))->Go();
+		(new BAlert("yikes", "Archive is failing" B_UTF8_ELLIPSIS, "OK"))->Go();
 	}
 	if (detach)
 	{

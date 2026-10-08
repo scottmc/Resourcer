@@ -1270,10 +1270,10 @@ void reswindow::MessageReceived(BMessage *message) {
 	switch (message->what) {
 		case B_ABOUT_REQUESTED:
 			#if __POWERPC__
-				(new BAlert("About...","Resourcer 3.0 for PowerPC\n"B_UTF8_COPYRIGHT"1999-2000 Nathan Whitehorn","OK"))->Go();
+				(new BAlert("About...","Resourcer 3.0 for PowerPC\n" B_UTF8_COPYRIGHT "1999-2000 Nathan Whitehorn","OK"))->Go();
 			#endif
 			#if !__POWERPC__
-				(new BAlert("About...","Resourcer 3.0 for Intel\n"B_UTF8_COPYRIGHT"1999-2000 Nathan Whitehorn","OK"))->Go();
+				(new BAlert("About...","Resourcer 3.0 for Intel\n" B_UTF8_COPYRIGHT "1999-2000 Nathan Whitehorn","OK"))->Go();
 			#endif
 			break;
 		case 'newf':

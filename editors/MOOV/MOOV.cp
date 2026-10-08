@@ -87,7 +87,7 @@ void messaging(BMessage *msg,BView *bkgview) {
 	float x,y;
 	switch (msg->what) {
 		case (uint32)-100:
-			(new BAlert("about","MOOV Editor for Resourcer 3.0\nCore Code "B_UTF8_COPYRIGHT"1991-1999, Be, Inc.","OK"))->Go();
+			(new BAlert("about","MOOV Editor for Resourcer 3.0\nCore Code " B_UTF8_COPYRIGHT "1991-1999, Be, Inc.","OK"))->Go();
 			break;
 		case (uint32)-200:
 			if (peterpan == NULL)
