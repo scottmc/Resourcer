@@ -69,7 +69,17 @@ RSRCS=
 #		naming scheme you need to specify the path to the library
 #		and it's name
 #		library: my_lib.a entry: my_lib.a or path/my_lib.a
-LIBS=  root be
+#	editors that use the media or translation kits need those libraries too;
+#	without them the symbols only resolve if the application happens to have
+#	loaded the library already (e.g. "resolve symbol ... WaitForSound" errors)
+EXTRA_LIBS =
+ifeq ($(EDITOR_NAME),bits)
+	EXTRA_LIBS = translation
+endif
+ifeq ($(EDITOR_NAME),nois)
+	EXTRA_LIBS = media translation
+endif
+LIBS=  root be $(EXTRA_LIBS)
 
 #	specify additional paths to directories following the standard
 #	libXXX.so or libXXX.a naming scheme.  You can specify full paths
