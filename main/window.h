@@ -722,18 +722,11 @@ class optwindow : public BWindow {
 					type = new BTextControl(BRect(10,34,be_plain_font->StringWidth("AAAA")+be_plain_font->StringWidth("Data Type: ")+20,54),"Type","Data Type: ","",new BMessage('tyc2'));
 					type->SetDivider(be_plain_font->StringWidth("Data Type: "));
 					type->TextView()->SetMaxBytes(4);
-					if (itemLista == NULL) {
-						BPopUpMenu *typemenu = new BPopUpMenu("Available Data Types",false,false);
-						init_typemenu(typemenu);
-						BMenuField *typechoice = new BMenuField(BRect(be_plain_font->StringWidth("AAAA")+be_plain_font->StringWidth("Data Type: ")+40,34,390,54),"typechoice","",typemenu);
-						typechoice->SetDivider(0);
-						gray->AddChild(typechoice);
-						itemLista = new BMessage;
-						typechoice->Archive(itemLista,true);
-					} else {
-						BMenuField *typechoice = new BMenuField(itemLista);
-						gray->AddChild(typechoice);
-					}
+					BPopUpMenu *typemenu = new BPopUpMenu("Available Data Types",false,false);
+					init_typemenu(typemenu);
+					BMenuField *typechoice = new BMenuField(BRect(be_plain_font->StringWidth("AAAA")+be_plain_font->StringWidth("Data Type: ")+40,34,390,54),"typechoice","",typemenu);
+					typechoice->SetDivider(0);
+					gray->AddChild(typechoice);
 					gray->AddChild(type);
 					id = new BTextControl(BRect(10,56,390,76),"ID","ID: ","",NULL);
 					id->SetDivider(be_plain_font->StringWidth("ID: "));
@@ -796,45 +789,53 @@ class optwindow : public BWindow {
 				AddChild(gray);
 				Show();
 			}
+			// The list of editors (file name and description) is read from the
+			// editors folder once and kept in itemLista; every dialog builds a
+			// fresh menu from it.
 			void init_typemenu(BPopUpMenu *menu) {
-				BMessage *message;
-				char name[B_FILE_NAME_LENGTH];
-				//char *descriptstring;
-				//---Get desc string
-				app_info info;
-				be_app->GetAppInfo(&info);
-				BEntry entry(&(info.ref));
-				BDirectory dir;
-				entry.GetParent(&dir);
-				entry.SetTo(&dir,"editors");
-				dir.SetTo(&entry);
-				BPath path;
-				BList *itemList = new BList;
-				dir.Rewind();
-				if (dir.GetNextEntry(&entry,true) == B_ENTRY_NOT_FOUND) {
+				if (itemLista == NULL) {
+					itemLista = new BMessage;
+					app_info info;
+					be_app->GetAppInfo(&info);
+					BEntry entry(&(info.ref));
+					BDirectory dir;
+					entry.GetParent(&dir);
+					entry.SetTo(&dir,"editors");
+					dir.SetTo(&entry);
+					BPath path;
+					char name[B_FILE_NAME_LENGTH];
+					dir.Rewind();
+					while (dir.GetNextEntry(&entry,true) == B_OK) {
+						if (entry.Exists() == false)
+							break;
+						entry.GetPath(&path);
+						image_id editor = load_add_on(path.Path());
+						if (editor < 0)
+							continue;
+						const char *temp;
+						if (get_image_symbol(editor,"description",B_SYMBOL_TYPE_DATA,(void **)(&temp)) == B_NO_ERROR) {
+							entry.GetName(name);
+							itemLista->AddString("typecode",name);
+							itemLista->AddString("description",temp);
+						}
+						unload_add_on(editor);
+					}
+				}
+				BList itemList;
+				const char *typecode;
+				const char *description;
+				for (int32 i = 0;itemLista->FindString("typecode",i,&typecode) == B_OK && itemLista->FindString("description",i,&description) == B_OK;i++) {
+					BMessage *message = new BMessage('tycd');
+					message->AddString("typecode",typecode);
+					itemList.AddItem(new BMenuItem(description,message));
+				}
+				if (itemList.CountItems() == 0) {
 					menu->SetEnabled(false);
 					return;
 				}
-				dir.Rewind();
-				for (;dir.GetNextEntry(&entry,true) != B_ENTRY_NOT_FOUND;) {
-					entry.GetPath(&path);
-					if (entry.Exists() == false)
-						break;
-					image_id editor = load_add_on(path.Path());
-					char *temp;
-					if (get_image_symbol(editor,"description",B_SYMBOL_TYPE_DATA,(void **)(&temp)) != B_NO_ERROR)
-						continue;
-					//descriptstring = new char[strlen(temp) + 1];
-					//strcpy(descriptstring,temp);
-					entry.GetName(name);
-					message = new BMessage('tycd');
-					message->AddString("typecode",name);
-					itemList->AddItem(new BMenuItem(temp,message));
-					unload_add_on(editor);
-				}
-				itemList->SortItems(&sortmenu);
-				for (int32 i = itemList->CountItems() - 1;i >= 0;i--) {
-					menu->AddItem((BMenuItem *)(itemList->ItemAt(i)));
+				itemList.SortItems(&sortmenu);
+				for (int32 i = itemList.CountItems() - 1;i >= 0;i--) {
+					menu->AddItem((BMenuItem *)(itemList.ItemAt(i)));
 				}
 			}
 			char *parse_size(size_t sizer) {
