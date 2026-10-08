@@ -9,7 +9,7 @@
 extern "C" _EXPORT void loaddata(unsigned char *,size_t,BView *);
 extern "C" _EXPORT unsigned char* savedata(size_t *,BView *);
 extern "C" _EXPORT void messaging(BMessage *,BView *);
-extern "C" __declspec(dllexport) const char description[] = "Unsigned 8 Byte Integer";
+extern "C" _EXPORT const char description[] = "Unsigned 8 Byte Integer";
 
 
 void loaddata(unsigned char *data,size_t length,BView *bkgview) {//runs when add-on starts, window is initialized, you are expected to write to it: rect is 300 x 300

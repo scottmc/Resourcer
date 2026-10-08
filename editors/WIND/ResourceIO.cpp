@@ -60,7 +60,7 @@ ssize_t ResourceIO::ReadAt(off_t position,void *buffer,size_t numBytes) {
 	const void *buf = res->LoadResource(type,id,&bytesRead);
 	if (buf == NULL)
 		return 0;
-	if (position > bytesRead)
+	if (position < 0 || (size_t)position > bytesRead)
 		return B_ERROR;
 	if ((bytesRead - position) > numBytes)
 		bytesRead = numBytes;

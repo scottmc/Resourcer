@@ -1,4 +1,4 @@
-typedef enum list_state{
+enum list_state{
 	collapsed,
 	expanded
 };
