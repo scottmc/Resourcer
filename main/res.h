@@ -84,7 +84,7 @@ class TypeItem : public BStringItem {
 
 class DoubleItem : public BListItem {
 	public:
-		DoubleItem(int32 resid,char *resname,BOutlineListView *owner,bool isattr) : BListItem(0,true) {
+		DoubleItem(int32 resid,const char *resname,BOutlineListView *owner,bool isattr) : BListItem(0,true) {
 			if (isattr) {
 				idstring = NULL;
 			} else {
@@ -228,7 +228,7 @@ class restypeview : public BOutlineListView {
 				SortItemsUnder(cur,false,&sortList);
 			}
 		}
-		DoubleItem *AddResource(type_code type,int32 id,char *name,size_t length,void *data,bool isattr,bool invoke = true);
+		DoubleItem *AddResource(type_code type,int32 id,const char *name,size_t length,void *data,bool isattr,bool invoke = true);
 		TypeItem *FindType(type_code type,bool attr) {
 			TypeItem *cur;
 			if (attr) {

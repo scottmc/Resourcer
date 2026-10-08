@@ -417,7 +417,8 @@ void restypeview::MessageReceived(BMessage *msg) {
 					map.DetachBitmap(&temp);
 					delete temp;
 					type = 'bits';
-					name = "Clipping";
+					static char clipping[] = "Clipping";
+					name = clipping;
 				} else {
 					type = code_from_MIME(adname);
 					if (type == 'bits') {
@@ -466,7 +467,7 @@ void restypeview::MessageReceived(BMessage *msg) {
 	return;
 }
 
-DoubleItem *restypeview::AddResource(type_code type,int32 id,char *name,size_t length,void *data,bool isattr,bool invoke) {
+DoubleItem *restypeview::AddResource(type_code type,int32 id,const char *name,size_t length,void *data,bool isattr,bool invoke) {
 	if (isattr)
 		((reswindow *)(Window()))->file->WriteAttr(name,type,0,data,length);
 	else
@@ -519,7 +520,8 @@ int32 copy(void *y) {
 	}
 	if (type == 'CSTR') {
 		type = 'MIME';
-		name = "text/plain";
+		static char textplain[] = "text/plain";
+		name = textplain;
 	}
 	bool isattr;
 	if (cura->idstring == NULL)
@@ -575,7 +577,8 @@ int32 getdata(void *y) {
 				delete temp;
 				construct = true;
 				type = 'bits';
-				name = "Clipping";
+				static char clipping[] = "Clipping";
+				name = clipping;
 			} else
 				goto NORMAL;
 		} else {
