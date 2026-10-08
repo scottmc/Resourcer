@@ -186,7 +186,7 @@ bool restypeview::InitiateDrag(BPoint point,int32 index, bool selected) {
 	todrag->AddInt32("be:actions", B_TRASH_TARGET);
 	char filename[B_FILE_NAME_LENGTH];
 	if (y->name[0] == 0)
-		sprintf(filename,"Resource ID: %ld",y->id);
+		sprintf(filename,"Resource ID: %ld",(long)y->id);
 	else
 		strcpy(filename,y->name);
 	todrag->AddString("be:clip_name", filename);
@@ -593,7 +593,7 @@ int32 getdata(void *y) {
 		for(id = 0;x->openres->HasResource(type,id);id++) {}
 		x->res->AddResource(type,id,name,size_t(size),data,false,false);
 		if (construct)
-			delete [] data;
+			delete [] (unsigned char *)data;
 		return 0;
 	}
 	
@@ -619,11 +619,11 @@ int32 copytoattr(void *y) {
 				attr_info inf;
 				if (cura->name == NULL) {
 					name = new char[255];
-					sprintf(name,"Resource ID: %ld",id);
+					sprintf(name,"Resource ID: %ld",(long)id);
 				} else {
 					if (cura->name[0] == 0) {
 						name = new char[255];
-						sprintf(name,"Resource ID: %ld",id);
+						sprintf(name,"Resource ID: %ld",(long)id);
 					} else {
 						name = new char[strlen(cura->name) + 1];
 						strcpy(name,cura->name);
@@ -746,7 +746,7 @@ class optwindow : public BWindow {
 					char ida[255];
 					sela = x->res->CurrentSelection();
 					if (to->idstring != NULL) {
-						sprintf(ida,"%ld",to->id);
+						sprintf(ida,"%ld",(long)to->id);
 						sel = sela; //check
 					} else {
 						ida[0] = 0;
@@ -866,11 +866,13 @@ class optwindow : public BWindow {
 			void add(void) {
 				Lock();
 				int32 test = 1;
+				long value;
 				char temp[15];
 				for (int i = 0; i < 4;i++) {
 					temp[i] = ' ';
 				}
-				sscanf(id->Text(),"%ld",&test);
+				if (sscanf(id->Text(),"%ld",&value) == 1)
+					test = value;
 				strcpy(temp,type->Text());
 				for (int i = strlen(temp); i < 4;i++) {
 					temp[i] = ' ';
@@ -938,7 +940,9 @@ class optwindow : public BWindow {
 			}
 			void changeinfo(void) {
 				int32 test = 1;
-				sscanf(id->Text(),"%ld",&test);
+				long value;
+				if (sscanf(id->Text(),"%ld",&value) == 1)
+					test = value;
 				char *namea = new char[strlen(name->Text()) + 1];
 				strcpy(namea,name->Text());
 				if (*namea == 0)
@@ -1025,7 +1029,7 @@ class optwindow : public BWindow {
 				}
 				if (willberes) {
 					toop->idstring = new char[20];
-					sprintf(toop->idstring,"%ld",toop->id);
+					sprintf(toop->idstring,"%ld",(long)toop->id);
 				} else
 					toop->idstring = NULL;
 				win->res->Invalidate(win->res->ItemFrame(win->res->IndexOf(toop)));

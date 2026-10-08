@@ -2,6 +2,7 @@
 #include <image.h>
 #include <interface/Window.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <interface/TextControl.h>
 #include <interface/MenuField.h>
 #include <interface/MenuItem.h>
@@ -36,15 +37,15 @@ void loaddata(unsigned char *data,size_t length,BView *bkgview) {
 	char buffer[80];
 	float vers_width = be_plain_font->StringWidth("Version: 1000");
 	float dot_width = be_plain_font->StringWidth(".1000");
-	sprintf(buffer,"%ld",info->major);
+	sprintf(buffer,"%lu",(unsigned long)info->major);
 	BTextControl* version = new BTextControl(BRect(0,20,vers_width,40), "vers","Version: ",buffer,NULL);
 	version->SetDivider(be_plain_font->StringWidth("Version: "));
 	bkgview->AddChild(version);
-	sprintf(buffer,"%ld",info->middle);
+	sprintf(buffer,"%lu",(unsigned long)info->middle);
 	version = new BTextControl(BRect(vers_width,20,vers_width + dot_width,40), "middle",".",buffer,NULL);
 	version->SetDivider(be_plain_font->StringWidth("."));
 	bkgview->AddChild(version);
-	sprintf(buffer,"%ld",info->minor);
+	sprintf(buffer,"%lu",(unsigned long)info->minor);
 	version = new BTextControl(BRect(vers_width + dot_width,20,vers_width + dot_width + dot_width,40), "minor",".",buffer,NULL);
 	version->SetDivider(be_plain_font->StringWidth("."));
 	bkgview->AddChild(version);
@@ -66,7 +67,7 @@ void loaddata(unsigned char *data,size_t length,BView *bkgview) {
 	BMenuField *variety = new BMenuField(BRect(vers_width + dot_width + dot_width +10,20,vers_width + dot_width + dot_width + 175,40),"Variety","Release: ",menu);
 	variety->SetDivider(be_plain_font->StringWidth("Release: "));
 	bkgview->AddChild(variety);
-	sprintf(buffer,"%ld",info->internal);
+	sprintf(buffer,"%lu",(unsigned long)info->internal);
 	version = new BTextControl(BRect(vers_width + dot_width + 175,20,vers_width + dot_width + dot_width + 180,40), "internal",NULL,buffer,NULL);
 	version->SetDivider(0);
 	bkgview->AddChild(version);
@@ -80,10 +81,10 @@ void loaddata(unsigned char *data,size_t length,BView *bkgview) {
 
 unsigned char* savedata(size_t *length,BView *bkgview) {
 	version_info *data = new version_info;
-	sscanf(((BTextControl*)(bkgview->ChildAt(0)))->Text(),"%ld",&(data->major));
-	sscanf(((BTextControl*)(bkgview->ChildAt(1)))->Text(),"%ld",&(data->middle));
-	sscanf(((BTextControl*)(bkgview->ChildAt(2)))->Text(),"%ld",&(data->minor));
-	sscanf(((BTextControl*)(bkgview->ChildAt(4)))->Text(),"%ld",&(data->internal));
+	data->major = strtoul(((BTextControl*)(bkgview->ChildAt(0)))->Text(),NULL,10);
+	data->middle = strtoul(((BTextControl*)(bkgview->ChildAt(1)))->Text(),NULL,10);
+	data->minor = strtoul(((BTextControl*)(bkgview->ChildAt(2)))->Text(),NULL,10);
+	data->internal = strtoul(((BTextControl*)(bkgview->ChildAt(4)))->Text(),NULL,10);
 	strcpy(data->short_info,((BTextControl*)(bkgview->ChildAt(5)))->Text());
 	strcpy(data->long_info,((BTextControl*)(bkgview->ChildAt(6)))->Text());
 	BMenu *menu = ((BMenuField *)(bkgview->ChildAt(3)))->Menu();

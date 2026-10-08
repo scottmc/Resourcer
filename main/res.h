@@ -88,7 +88,7 @@ class DoubleItem : public BListItem {
 				idstring = NULL;
 			} else {
 				idstring = new char[20];
-				sprintf(idstring,"%ld",resid);
+				sprintf(idstring,"%ld",(long)resid);
 			}
 			name = new char[strlen(resname) + 1];
 			strcpy(name,resname);

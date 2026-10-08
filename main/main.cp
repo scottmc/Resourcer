@@ -95,9 +95,9 @@ void DoubleItem::Invoke(bool generic) {
 		sprintf(winname,"%s Attribute Name: %s",super->TypeCode(),name);
 	else {
 		if (name[0] == 0)
-			sprintf(winname,"%s Resource Id: %ld",super->TypeCode(),id);
+			sprintf(winname,"%s Resource Id: %ld",super->TypeCode(),(long)id);
 		else
-			sprintf(winname,"%s Resource Id: %ld Name: %s",super->TypeCode(),id,name);
+			sprintf(winname,"%s Resource Id: %ld Name: %s",super->TypeCode(),(long)id,name);
 	}
 	pluginwindow *win = new pluginwindow(&(this->win),plugin,winname,id,type,name,(idstring == NULL));
 	win->gray = new BView(BRect(0,0,300,300),"graybkgrd",B_FOLLOW_ALL_SIDES,B_WILL_DRAW | B_FRAME_EVENTS);

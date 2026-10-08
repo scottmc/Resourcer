@@ -250,7 +250,7 @@ ContainerView::ContainerView(unsigned char *data, size_t length) : BView(BRect(1
 		Address = new AddressView(this);
 		AddChild(Address);
 		char string[20];
-		sprintf(string," / %ld",length/PAGE);
+		sprintf(string," / %lu",(unsigned long)(length/PAGE));
 		AddChild(new BStringView(BRect(170,10,230,25),"total_blocks",string));
 		AddChild(new BButton(BRect(220,10,280,30),"next","Next",new BMessage(-300)));
 		AddChild(new BButton(BRect(5,10,65,30),"back","Previous",new BMessage(-400)));
@@ -370,7 +370,7 @@ long openfile(void *m) {
 	((ContainerView *)(bkgview->FindView("hex")))->curPage = 0;
 	((ContainerView *)(bkgview->FindView("hex")))->GoToPage(0,false);
 	char *string = new char[20];
-	sprintf(string," / %ld",(size / PAGE));
+	sprintf(string," / %lu",(unsigned long)(size / PAGE));
 	((BStringView *)(bkgview->FindView("hex")->FindView("total_blocks")))->SetText(string);
 	delete string;
 	bkgview->Window()->Unlock();
@@ -415,19 +415,22 @@ void messaging(BMessage *message,BView *bkgview) { //receives messages from wind
 			panel->Show();
 			break;
 		case (uint32)-200:
-			sscanf(((ContainerView *)(bkgview->FindView("hex")))->Address->Text(),"%ld",&newPage);
-			if (newPage < 0)
-				break;
+			{
+				long page;
+				if (sscanf(((ContainerView *)(bkgview->FindView("hex")))->Address->Text(),"%ld",&page) != 1 || page < 0)
+					break;
+				newPage = page;
+			}
 			((ContainerView *)(bkgview->FindView("hex")))->GoToPage(newPage);
 			break;
 		case (uint32)-300:
 			((ContainerView *)(bkgview->FindView("hex")))->GoToPage(((ContainerView *)(bkgview->FindView("hex")))->curPage + 1);
-			sprintf(hoober,"%ld",((ContainerView *)(bkgview->FindView("hex")))->curPage);
+			sprintf(hoober,"%ld",(long)((ContainerView *)(bkgview->FindView("hex")))->curPage);
 			((ContainerView *)(bkgview->FindView("hex")))->Address->SetText(hoober);
 			break;
 		case (uint32)-400:
 			((ContainerView *)(bkgview->FindView("hex")))->GoToPage(((ContainerView *)(bkgview->FindView("hex")))->curPage - 1);
-			sprintf(hoober,"%ld",((ContainerView *)(bkgview->FindView("hex")))->curPage);
+			sprintf(hoober,"%ld",(long)((ContainerView *)(bkgview->FindView("hex")))->curPage);
 			((ContainerView *)(bkgview->FindView("hex")))->Address->SetText(hoober);
 			break;
 		case B_REFS_RECEIVED:

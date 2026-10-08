@@ -2,6 +2,7 @@
 #include <image.h>
 #include <interface/Window.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <interface/TextControl.h>
 //-------------------------------------------
 
@@ -19,7 +20,7 @@ void loaddata(unsigned char *data,size_t length,BView *bkgview) {//runs when add
 	} else {
 		int64 dataa;
 		dataa = *(int64 *)(data);
-		sprintf(mime,"%d",dataa);
+		sprintf(mime,"%lld",(long long)dataa);
 	}
 	bkgview->Window()->ResizeTo(300,40);
 	BTextControl *v = new BTextControl(BRect(20,5,280,35),"Integer","Data: ",mime,NULL);
@@ -30,8 +31,7 @@ void loaddata(unsigned char *data,size_t length,BView *bkgview) {//runs when add
 unsigned char* savedata(size_t *length,BView *bkgview) { //return data, clean up, and set length to the size of data
 	BTextControl *text = (BTextControl *)(bkgview->ChildAt(0));
 	int64 *data = new int64;
-	int64 datab;
-	sscanf(text->Text(),"%d",&datab);
+	int64 datab = strtoll(text->Text(),NULL,10);
 	*data = datab;
 	*length = 8;
 	return (unsigned char*)(data);

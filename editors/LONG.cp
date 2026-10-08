@@ -19,7 +19,7 @@ void loaddata(unsigned char *data,size_t length,BView *bkgview) {//runs when add
 	} else {
 		int32 dataa;
 		dataa = *(int32 *)(data);
-		sprintf(mime,"%ld",dataa);
+		sprintf(mime,"%ld",(long)dataa);
 	}
 	bkgview->Window()->ResizeTo(300,40);
 	BTextControl *v = new BTextControl(BRect(20,5,280,35),"Integer","Data: ",mime,NULL);
@@ -30,8 +30,9 @@ void loaddata(unsigned char *data,size_t length,BView *bkgview) {//runs when add
 unsigned char* savedata(size_t *length,BView *bkgview) { //return data, clean up, and set length to the size of data
 	BTextControl *text = (BTextControl *)(bkgview->ChildAt(0));
 	char *toreturn = new char[4];
-	int32 data;
-	sscanf(text->Text(),"%ld",&data);
+	long value = 0;
+	sscanf(text->Text(),"%ld",&value);
+	int32 data = value;
 	char *one = (char *)(&data);
 	char *two = one + 1;
 	char *three = two + 1;

@@ -31,7 +31,7 @@ unsigned char* savedata(size_t *length,BView *bkgview) { //return data, clean up
 	BTextControl *text = (BTextControl *)(bkgview->ChildAt(0));
 	//char *toreturn = new char[4];
 	int8 *data = new int8;
-	int32 datab;
+	long datab = 0;
 	sscanf(text->Text(),"%ld",&datab);
 	if (datab > 127)
 		datab = 127;

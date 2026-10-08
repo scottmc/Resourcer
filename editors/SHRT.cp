@@ -29,12 +29,12 @@ void loaddata(unsigned char *data,size_t length,BView *bkgview) {//runs when add
 
 unsigned char* savedata(size_t *length,BView *bkgview) { //return data, clean up, and set length to the size of data
 	BTextControl *text = (BTextControl *)(bkgview->ChildAt(0));
-	int32 data;
+	long data = 0;
 	char *temp = new char[strlen(text->Text()) + 1];
 	strcpy(temp,text->Text());
 	sscanf(temp,"%ld",&data);
 	*length = 2;
-	delete temp;
+	delete [] temp;
 	return (unsigned char*)(new int16(data));
 }
 

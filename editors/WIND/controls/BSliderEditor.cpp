@@ -160,12 +160,12 @@ void BSliderEditor::SetTo(BMessage* archive)
 	else
 	{
 		char colortext[12];
-		sprintf(colortext, "%lX", *(int32*)&barcolor);
+		sprintf(colortext, "%lX", (unsigned long)*(uint32*)&barcolor);
 		fBarColor->SetText(colortext);
 	}
 
 	rgb_color fillcolor;
-	if (archive->FindInt32("_fcolor", (int32*)&barcolor))
+	if (archive->FindInt32("_fcolor", (int32*)&fillcolor))
 	{
 		fUseFillCheck->SetValue(B_CONTROL_OFF);
 		fFillColor->SetEnabled(false);
@@ -175,7 +175,7 @@ void BSliderEditor::SetTo(BMessage* archive)
 		fUseFillCheck->SetValue(B_CONTROL_ON);
 		fFillColor->SetEnabled(true);
 		char colortext[12];
-		sprintf(colortext, "%lX", *(int32*)&fillcolor);
+		sprintf(colortext, "%lX", (unsigned long)*(uint32*)&fillcolor);
 		fFillColor->SetText(colortext);
 	}
 

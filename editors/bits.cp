@@ -26,10 +26,10 @@ void processTIFF(BMessage *TIFF, BPView *view);
 void loadopenbox(BPView *view);
 
 BRect find_center(uint32 width, uint32 height, BRect a) {
-	uint32 screen_width = a.right - a.left;
-	uint32 screen_height = a.bottom - a.top;
-	uint32 c = ((screen_width / 2) - (width / 2)) + a.left;
-	uint32 d = ((screen_height / 2) - (height / 2)) + a.top;
+	float screen_width = a.right - a.left;
+	float screen_height = a.bottom - a.top;
+	float c = ((screen_width / 2) - (width / 2)) + a.left;
+	float d = ((screen_height / 2) - (height / 2)) + a.top;
 	BRect toreturn;
 	toreturn.left = c;
 	toreturn.top = d;
