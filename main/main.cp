@@ -5,7 +5,9 @@
 #include "preamble.h"
 #include "class.h"
 #include "res.h"
-#include "window.h"
+#include "reswindow.h"
+#include "pluginwindow.h"
+#include "optwindow.h"
 
 int main(void) {
 	openmwindows = 0;       //---This tracks open documents, so we can quit when it's zero--

@@ -4,6 +4,9 @@
 #include "includes.h"
 #include "preamble.h"
 #include "res.h"
+#include "reswindow.h"
+#include "pluginwindow.h"
+#include "optwindow.h"
 
 TypeItem::TypeItem(type_code code) : BStringItem("type") {
 	type = code;
@@ -318,4 +321,338 @@ const char *MIME_from_code(type_code code) {
 			break;
 	}
 	return MIME;
+}
+
+bool restypeview::InitiateDrag(BPoint point,int32 index, bool selected) {
+	if (!selected)
+		return false;
+	if (ItemAt(index)->OutlineLevel() < 2)
+		return false;
+	DoubleItem *y = (DoubleItem *)(ItemAt(index));
+	BMessage *todrag = new BMessage(B_SIMPLE_DATA);
+	size_t size;
+	type_code code = ((TypeItem *)(Superitem(y)))->type;
+	unsigned char *data;
+	if (y->idstring != NULL) {
+		const void *dat = ((reswindow *)(Window()))->openres->LoadResource(code,y->id,&size);
+		data = new unsigned char[size];
+		memcpy(data,dat,size);
+	} else {
+		attr_info inf;
+		((reswindow *)(Window()))->file->GetAttrInfo(y->name,&inf);
+		size = inf.size;
+		data = new unsigned char[size];
+		((reswindow *)(Window()))->file->ReadAttr(y->name,code,0,data,size);
+	}
+	char m_type[B_MIME_TYPE_LENGTH];
+	strcpy(m_type,MIME_from_code(code));
+	todrag->AddString("be:types", B_FILE_MIME_TYPE);
+	todrag->AddString("be:types", m_type);
+	todrag->AddString("be:filetypes", m_type);
+	todrag->AddInt32("be:actions", B_COPY_TARGET);
+	todrag->AddInt32("be:actions", B_TRASH_TARGET);
+	char filename[B_FILE_NAME_LENGTH];
+	if (y->name[0] == 0)
+		sprintf(filename,"Resource ID: %ld",(long)y->id);
+	else
+		strcpy(filename,y->name);
+	todrag->AddString("be:clip_name", filename);
+	if (y->idstring != NULL)
+		todrag->AddBool("isattr",false);
+	else
+		todrag->AddBool("isattr",true);
+	todrag->AddData("type",B_UINT32_TYPE,&code,4);
+	if (code == 'CSTR')
+		todrag->AddData(m_type,'MIME',data,ssize_t(size));
+	delete  [] data;
+	todrag->AddString("name",y->name);
+	todrag->AddPointer("this",this);
+	if (y->idstring == NULL)
+		todrag->AddInt32("id",0);
+	else
+		todrag->AddInt32("id",y->id);
+	DragMessage(todrag,ItemFrame(IndexOf(y)));
+	return true;
+}
+
+void restypeview::MessageReceived(BMessage *msg) {
+	if (msg->WasDropped())
+		StrokeRect(Bounds(),B_SOLID_LOW);
+	BOutlineListView::MessageReceived(msg);
+	reswindow *x = (reswindow *)(Window());
+	char *name;
+	type_code type;
+	void *dat;
+	ssize_t size;
+	int32 id = 0;
+	BMessage *message = msg;
+	BOutlineListView *old;
+	unsigned char *data;
+	if (msg->WasDropped() == false) {
+		switch (msg->what) {
+			case B_COPY_TARGET:
+				{
+				const BMessage *prev = msg->Previous();
+				if (prev->HasInt32("id"))
+					prev->FindInt32("id",&id);
+				else
+					id = 0;
+				size_t size;
+				type_code *temp;
+				prev->FindData("type",(uint32)(B_UINT32_TYPE),(const void **)&temp,new ssize_t);
+				type = *temp;
+				entry_ref ref;
+				msg->FindRef("directory",&ref);
+				msg->FindString("name",(const char **)(&name));
+				BDirectory dir(&ref);
+				BFile file(&dir,name,B_READ_WRITE | B_CREATE_FILE);
+				unsigned char *data;
+				bool isattr;
+				prev->FindBool("isattr",&isattr);
+				if (!isattr) {
+					const void *dat = ((reswindow *)(Window()))->openres->LoadResource(type,id,&size);
+					data = new unsigned char[size];
+					memcpy(data,dat,size);
+				} else {
+					char *name;
+					prev->FindString("be:clip_name",(const char **)(&name));
+					attr_info inf;
+					((reswindow *)(Window()))->file->GetAttrInfo(name,&inf);
+					size = inf.size;
+					data = new unsigned char[size];
+					((reswindow *)(Window()))->file->ReadAttr(name,type,0,data,size);
+				}
+				file.Write(data,size);
+				delete [] data;
+				BNodeInfo ni(&file);
+				/*if (type == 'bits')
+					ni.SetType("image/x-portable-pixmap");
+				else */{
+					char *mime;
+					msg->FindString("be:filetypes",(const char **)(&mime));
+					ni.SetType(mime);
+				}
+				return;
+				}
+				break;
+			case B_TRASH_TARGET:
+				DeleteSelection();
+				break;
+			case 'REQU':
+				{
+				const BMessage *prev = msg->Previous();
+				if (prev->HasInt32("id"))
+					prev->FindInt32("id",&id);
+				else
+					id = 0;
+				size_t size;
+				type_code *temp;
+				prev->FindData("type",(uint32)(B_UINT32_TYPE),(const void **)&temp,new ssize_t);
+				type = *temp;
+				void *data;
+				bool isattr;
+				prev->FindBool("isattr",&isattr);
+				if (!isattr) {
+					const void *dat = ((reswindow *)(Window()))->openres->LoadResource(type,id,&size);
+					data = new unsigned char[size];
+					memcpy(data,dat,size);
+				} else {
+					char *name;
+					prev->FindString("be:clip_name",(const char **)(&name));
+					attr_info inf;
+					((reswindow *)(Window()))->file->GetAttrInfo(name,&inf);
+					size = inf.size;
+					data = new unsigned char[size];
+					((reswindow *)(Window()))->file->ReadAttr(name,type,0,data,size);
+				}
+				BMessage *msg1 = new BMessage('REQ1');
+				msg1->AddData("data",type,data,size);
+				msg->SendReply(msg1);
+				}
+				break;
+			case B_MIME_DATA:
+				goto app_reply;
+				break;
+		}
+		return;
+	}
+	if (msg->HasPointer("this")) {
+		message->FindPointer("this",(void **)(&old));
+		if (old == this)
+			return;
+		BMessage *reply = new BMessage;
+		message->SendReply('REQU',reply);
+		message->FindString("name",(const char **)(&name));
+		if (message->HasInt32("id"))
+			message->FindInt32("id",&id);
+		else
+			id = 0;
+		message = reply;
+		message->GetInfo("data",&type);
+		message->FindData("data",type,(const void **)&dat,&size);
+		data = new unsigned char[size];
+		memcpy(data,dat,size);
+		if (data == NULL) {
+			return;
+		}
+	} else {
+		if (msg->GetInfo('MIME',0,&name,&type) != B_OK) {
+			char adname[B_MIME_TYPE_LENGTH];
+			entry_ref ref;
+			if (msg->FindRef("refs",&ref) != B_OK) {
+				BMessage *reply = new BMessage(B_COPY_TARGET);
+				reply->AddString("be:types","image/x-bmp");
+				msg->SendReply(reply,this);
+				return;
+			}
+			name = new char[B_FILE_NAME_LENGTH];
+			BEntry(&ref).GetName(name);
+			BFile file(&ref, B_READ_ONLY);
+			BNodeInfo(&file).GetType(adname); 
+			if ((strcmp(adname,"application/x-be-resource") == 0)) {
+				((reswindow *)(Window()))->CloseWindows();
+				Window()->Lock();
+				MakeEmpty();
+				if (((reswindow *)(Window()))->openres->MergeFrom(&file) != B_OK) {
+					beep();
+					return;
+				}
+				FillRect(Bounds(),B_SOLID_LOW);
+				Window()->Unlock();
+				Init(((reswindow *)(Window()))->openres);
+				((reswindow *)(Window()))->changes = true;
+				return;
+			} else {
+				{
+					BMessage *q = new BMessage;
+					char *temp;
+					type_code fool;
+					if (message->GetInfo('MSGG',0,&temp,&fool) == B_OK) {
+						message->FindMessage(temp,q);
+						if (validate_instantiation(q,"BBitmap"))
+							message = q;
+					}
+				}
+				if (validate_instantiation(message,"BBitmap")) {
+					BBitmap *temp = new BBitmap(message);
+					BBitmapStream map(temp);
+					size = map.Size();
+					data = new unsigned char[size];
+					map.Read(data,size);
+					size_t tempSize = temp->BitsLength();
+					memcpy((void *)(addr_t(data) + (size - tempSize)),temp->Bits(),tempSize);
+					map.DetachBitmap(&temp);
+					delete temp;
+					type = 'bits';
+					static char clipping[] = "Clipping";
+					name = clipping;
+				} else {
+					type = code_from_MIME(adname);
+					if (type == 'bits') {
+						BMallocIO io;
+						BTranslatorRoster::Default()->Translate(&file,NULL,NULL,&io,'bits');
+						size = io.BufferLength();
+						data = new unsigned char[size];
+						memcpy(data,io.Buffer(),size);
+					} else {
+						off_t temporar;
+						file.GetSize(&temporar);
+						size = temporar;
+						data = new unsigned char[size];
+						file.Read(data,size);
+					}
+				}
+				id = 0;
+			}
+		} else {
+	app_reply:
+			unsigned char *data2;
+			char *name2;
+			msg->GetInfo(B_MIME_TYPE,0,&name2,&type);
+			if (msg->FindData(name2,B_MIME_TYPE,0,(const void **)&data2,&size) != B_OK)
+				return;
+			type = code_from_MIME(name2);
+			if (type == 'CSTR')
+				data = new unsigned char[size + 1];
+			else
+				data = new unsigned char[size];
+			memcpy(data,data2,size);
+			if (type == 'CSTR') {
+				data[size] = 0;
+				size++;
+			}
+			if (msg->FindString("be:clip_name",(const char **)(&name2)) == B_OK) {
+				name = new char[strlen(name2) + 1];
+				strcpy(name,name2);
+			} else
+				name = new char(0);
+		}
+	}
+	for(;x->openres->HasResource(type,id);id++) {}
+	AddResource(type,id,name,size_t(size),data,false,false);
+	delete [] data;
+	return;
+}
+
+DoubleItem *restypeview::AddResource(type_code type,int32 id,const char *name,size_t length,void *data,bool isattr,bool invoke) {
+	if (isattr)
+		((reswindow *)(Window()))->file->WriteAttr(name,type,0,data,length);
+	else
+		((reswindow *)(Window()))->openres->AddResource(type,id,data,length,name);
+	DoubleItem *item = new DoubleItem(id,name,this,isattr);
+	Window()->Lock();
+	AddUnder(item,FindType(type,isattr));
+	Sort();
+	if (invoke)
+		item->Invoke();
+	((reswindow *)(Window()))->changes = true;
+	Invalidate(Bounds());
+	if (Window()->IsLocked())
+		Window()->Unlock();
+	return item;
+}
+
+	
+void restypeview::KeyDown(const char *bytes, int32 numBytes) {
+	if (numBytes == 1) {
+		if ((*bytes == B_BACKSPACE) || (*bytes == B_DELETE)) {
+			if (CurrentSelection() < 0) {
+				BOutlineListView::KeyDown(bytes,numBytes);
+				return;
+			}
+			if (ItemAt(CurrentSelection())->OutlineLevel() < 2) {
+				BOutlineListView::KeyDown(bytes,numBytes);
+				return;
+			}
+			DeleteSelection();
+		}
+	}
+	BOutlineListView::KeyDown(bytes,numBytes);
+}
+
+void restypeview::DeleteSelection(DoubleItem *item) {
+	if (item == NULL)
+		item = (DoubleItem *)(ItemAt(CurrentSelection()));
+	TypeItem *type = (TypeItem *)(Superitem(item));
+	if (item->idstring != NULL)
+		((reswindow *)(Window()))->openres->RemoveResource(type->type,item->id);
+	else
+		((reswindow *)(Window()))->file->RemoveAttr(item->name);
+	if (item->win != NULL) {
+		item->win->PostMessage(B_QUIT_REQUESTED);
+		item->win = NULL;
+	}
+	if (CountItemsUnder(type,true) == 1)
+		RemoveItem(type);
+	else
+		RemoveItem(item);
+	if (CountItemsUnder(resources,true) == 0) {
+		resources->SetText("No Resources");
+		resources->SetEnabled(false);
+	}
+	if (CountItemsUnder(attributes,true) == 0) {
+		attributes->SetText("No Attributes");
+		attributes->SetEnabled(false);
+	}
+	((reswindow *)(Window()))->changes = true;
 }
