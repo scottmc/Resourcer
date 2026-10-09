@@ -10,35 +10,6 @@ int sortList(const BListItem *one,const BListItem *two);
 
 class DoubleItem;
 
-bool alphabet(const char *string1, const char *string2);
-	
-bool alphabet(const char *string1, const char *string2) {
-	size_t length1 = strlen(string1);
-	size_t length2 = strlen(string2);
-	size_t length;
-	bool xgreater = false;
-	if (length1 > length2)
-		length = length2;
-	else
-		length = length1;
-	size_t i;
-	BString s1(string1);
-	BString s2(string2);
-	s1.ToLower();
-	s2.ToLower();
-	for (i = 0;i < length;i++) {
-		if (s1[i] != s2[i]) {
-			if (s1[i] > s2[i]) {
-				xgreater = true;
-				break;
-			} else {
-				xgreater = false;
-				break;
-			}
-		}
-	}
-	return xgreater;
-}
 
 class TypeItem : public BStringItem {
 	public:

@@ -5,7 +5,6 @@ int32 copytoattr(void *y);
 int32 copy(void *y);
 int32 getdata(void *y);
 int32 copytoattr(void *y);
-int sortmenu(const void *first,const void *second);
 type_code code_from_MIME(char *MIME);
 const char *MIME_from_code(type_code code);
 	
@@ -704,13 +703,6 @@ int32 copytoattr(void *y) {
 		return 0;
 }
 
-int sortmenu(const void *first,const void *second) {
-	if (alphabet((*((BMenuItem **)(first)))->Label(),(*((BMenuItem **)(second)))->Label()))
-		return -1;
-	else
-		return 1;
-	return 0;
-}
 
 class optwindow : public BWindow {
 	public:

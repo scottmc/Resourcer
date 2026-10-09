@@ -4,6 +4,8 @@
 class reswindow;
 BRect find_center(uint32 width, uint32 height);
 BRect find_center(BRect rect,uint32 width, uint32 height);
+bool alphabet(const char *string1, const char *string2);
+int sortmenu(const void *first,const void *second);
 #if __INTEL__ || defined(__x86_64__)
 	type_code flipcode (type_code original);
 #endif
@@ -21,20 +23,6 @@ typedef struct{
 } plug_in;
 
 
-#if __INTEL__ || defined(__x86_64__)
-	type_code flipcode (type_code original) {
-		type_code type = original;
-		char *one = (char *)(&original);
-		char *two = one + 1;
-		char *three = two + 1;
-		char *four = three + 1;
-		*((char *)(&type)) = *four;
-		*((char *)(&type) + 1) = *three;
-		*((char *)(&type) + 2) = *two;
-		*((char *)(&type) + 3) = *one;
-		return type;
-	}
-#endif
 
 class appFilter : public BRefFilter {
 	public:
@@ -52,33 +40,6 @@ class appFilter : public BRefFilter {
 //						struct stat_beos* stat, const char* mimeType) = 0;
 };
 
-BRect find_center(uint32 width, uint32 height) {
-	BRect a = BScreen(B_MAIN_SCREEN_ID).Frame();
-	uint32 screen_width = (uint32)(a.right - a.left);
-	uint32 screen_height = (uint32)(a.bottom - a.top);
-	uint32 c = (uint32)(((screen_width / 2) - (width / 2)) + a.left);
-	uint32 d = (uint32)(((screen_height / 2) - (height / 2)) + a.top);
-	BRect toreturn;
-	toreturn.left = c;
-	toreturn.top = d;
-	toreturn.right = c + width;
-	toreturn.bottom = d + height;
-	return toreturn;
-}
-
-BRect find_center(BRect rect,uint32 width, uint32 height) {
-	BRect a = rect;
-	uint32 screen_width = (uint32)(a.right - a.left);
-	uint32 screen_height = (uint32)(a.bottom - a.top);
-	uint32 c = (uint32)(((screen_width / 2) - (width / 2)) + a.left);
-	uint32 d = (uint32)(((screen_height / 2) - (height / 2)) + a.top);
-	BRect toreturn;
-	toreturn.left = c;
-	toreturn.top = d;
-	toreturn.right = c + width;
-	toreturn.bottom = d + height;
-	return toreturn;
-}
 extern BFilePanel *openpanel;
 extern BFilePanel *newpanel;
 extern BAlert *alert;
