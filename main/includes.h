@@ -4,6 +4,7 @@
 #include <app/Application.h>
 #include <app/Roster.h>
 #include <support/String.h>
+#include <stdio.h>
 #include <string.h>
 #include <app/Clipboard.h>
 #include <storage/Directory.h>

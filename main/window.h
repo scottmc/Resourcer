@@ -5,8 +5,6 @@ int32 copytoattr(void *y);
 int32 copy(void *y);
 int32 getdata(void *y);
 int32 copytoattr(void *y);
-type_code code_from_MIME(char *MIME);
-const char *MIME_from_code(type_code code);
 	
 class FillerView : public BView {
 	public:
@@ -208,46 +206,6 @@ bool restypeview::InitiateDrag(BPoint point,int32 index, bool selected) {
 		todrag->AddInt32("id",y->id);
 	DragMessage(todrag,ItemFrame(IndexOf(y)));
 	return true;
-}
-
-type_code code_from_MIME(char *MIME) {
-	type_code type = 'RAWT';
-	BMimeType mime(MIME);
-	if (mime == BMimeType("text/plain"))
-		type = 'CSTR';
-	if (BMimeType("image").Contains(&mime))
-		type = 'bits';
-	if (BMimeType("video").Contains(&mime))
-		type = 'MOOV';
-	if (BMimeType("resource").Contains(&mime)) {
-		TypeItem xyz('none');
-		xyz.SetTypeCode(MIME + 9);
-		type = xyz.type;
-	}
-	return type;
-}
-
-const char *MIME_from_code(type_code code) {
-	const char *MIME;
-	switch (code) {
-		case 'CSTR':
-			MIME = "text/plain";
-			break;
-		case 'bits':
-			MIME = "image/x-portable-pixmap";
-			break;
-		case 'MOOV':
-			MIME = "video";
-			break;
-		default:
-			{
-				char *resmime = new char[B_MIME_TYPE_LENGTH];
-				sprintf(resmime,"resource/%s",TypeItem(code).TypeCode());
-				MIME = resmime;
-			}
-			break;
-	}
-	return MIME;
 }
 
 void restypeview::MessageReceived(BMessage *msg) {
