@@ -79,12 +79,12 @@ BRect find_center(BRect rect,uint32 width, uint32 height) {
 	toreturn.bottom = d + height;
 	return toreturn;
 }
-BFilePanel *openpanel;
-BFilePanel *newpanel;
-BAlert *alert;
-int32 mbheight;
-int32 openmwindows;
-BMessage *itemLista;
+extern BFilePanel *openpanel;
+extern BFilePanel *newpanel;
+extern BAlert *alert;
+extern int32 mbheight;
+extern int32 openmwindows;
+extern BMessage *itemLista;
 class pluginwindow;
 
 #endif /* RESOURCER_MAIN_PREAMBLE_H */

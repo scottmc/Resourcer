@@ -3,10 +3,10 @@
 
 #include <FindDirectory.h>
 #include <Path.h>
-bool launched;
-bool alredopen;
-bool panelopen;
-bool openpan;
+extern bool launched;
+extern bool alredopen;
+extern bool panelopen;
+extern bool openpan;
 
 class BRApplication : public BApplication {
 	public:
