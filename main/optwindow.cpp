@@ -198,6 +198,8 @@ optwindow::add(void) {
 		if (win->openres->HasResource(typea,test) == true) {
 			BAlert *alert = new BAlert("alert","This resource already exists. Would you like to overwrite the existing one?","Cancel","OK",NULL,B_WIDTH_AS_USUAL,B_STOP_ALERT);
 			if (alert->Go() == 0) {
+				Unlock();
+				delete [] namea;
 				return;
 			}
 			TypeItem *super = win->res->FindType(typea,false);
@@ -216,6 +218,8 @@ optwindow::add(void) {
 		if (win->file->GetAttrInfo(namea,&inf) != B_ENTRY_NOT_FOUND) {
 			BAlert *alert = new BAlert("alert","An attribute with this name already exists. Would you like to overwrite the existing one?","Cancel","OK",NULL,B_WIDTH_AS_USUAL,B_STOP_ALERT);
 			if (alert->Go() == 0) {
+				Unlock();
+				delete [] namea;
 				return;
 			}
 			DoubleItem *to_remove;
@@ -251,26 +255,30 @@ optwindow::changeinfo(void) {
 	long value;
 	if (sscanf(id->Text(),"%ld",&value) == 1)
 		test = value;
-	char *namea = new char[strlen(name->Text()) + 1];
-	strcpy(namea,name->Text());
+	char *namebuf = new char[strlen(name->Text()) + 1];	//---owns the allocation
+	strcpy(namebuf,name->Text());
+	char *namea = namebuf;
 	if (*namea == 0)
 		namea = NULL;
 	if (willberes) {
 		if ((win->openres->HasResource(typeb,test) == true) && (test != toop->id)) {
 			BAlert *alert = new BAlert("alert","This resource already exists. Would you like to overwrite the existing one?","Cancel","OK",NULL,B_WIDTH_AS_USUAL,B_STOP_ALERT);
 			if (alert->Go() == 0) {
+				delete [] namebuf;
 				return;
 			}
 		}
 	} else {
 		if (namea == NULL) {
 			(new BAlert("alert","Attributes must have a name.","OK",NULL,NULL,B_WIDTH_AS_USUAL,B_STOP_ALERT))->Go();
+			delete [] namebuf;
 			return;
-		} 
+		}
 		attr_info inf;
 		if ((win->file->GetAttrInfo(namea,&inf) != B_ENTRY_NOT_FOUND) && (strcmp(namea,toop->name))) {
 			BAlert *alert = new BAlert("alert","An attribute with this name already exists. Would you like to overwrite the existing one?","Cancel","OK",NULL,B_WIDTH_AS_USUAL,B_STOP_ALERT);
 			if (alert->Go() == 0) {
+				delete [] namebuf;
 				return;
 			}
 		}
@@ -301,10 +309,13 @@ optwindow::changeinfo(void) {
 		win->openres->AddResource(typeb,test,data,length,namea);
 	else
 		win->file->WriteAttr(namea,typeb,0,data,length);
+	delete [] data;
 	toop->id = test;
-	if (namea == NULL)
-		toop->name = new char(0);
-	else {
+	delete [] toop->name;
+	if (namea == NULL) {
+		toop->name = new char[1];
+		toop->name[0] = 0;
+	} else {
 		toop->name = new char[strlen(namea) + 1];
 		strcpy(toop->name,namea);
 	}
@@ -335,6 +346,7 @@ optwindow::changeinfo(void) {
 			win->res->RemoveItem(toop);
 		win->res->AddUnder(toop,win->res->FindType(typeb,true));
 	}
+	delete [] toop->idstring;
 	if (willberes) {
 		toop->idstring = new char[20];
 		sprintf(toop->idstring,"%ld",(long)toop->id);
@@ -345,6 +357,7 @@ optwindow::changeinfo(void) {
 	if (win->IsLocked())
 		win->Unlock();
 	win->changes = true;
+	delete [] namebuf;
 	PostMessage(B_QUIT_REQUESTED);
 }
 

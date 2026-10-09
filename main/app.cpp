@@ -29,7 +29,7 @@ BRApplication::MessageReceived(BMessage *message) {
 			dissectwindow(message);
 			break;
 		case 'chge':
-			delete retrieve;
+			delete [] retrieve;
 			BTextControl *text;
 			message->FindPointer("source",(void **)(&text));
 			retrieve = new char[strlen(text->Text()) + 1];

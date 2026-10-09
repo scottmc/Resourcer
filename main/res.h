@@ -16,10 +16,14 @@ const char *MIME_from_code(type_code code);
 class TypeItem : public BStringItem {
 	public:
 		TypeItem(type_code code);
+		~TypeItem(void);
 		char *TypeCode(void);
 		void SetTypeCode(char *code);
 		type_code type;
 		const char *description;
+	private:
+		char *descbuf;
+		char codebuf[5];
 };
 
 class DoubleItem : public BListItem {

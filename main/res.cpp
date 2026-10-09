@@ -10,6 +10,7 @@
 
 TypeItem::TypeItem(type_code code) : BStringItem("type") {
 	type = code;
+	descbuf = NULL;
 	app_info info;
 	be_app->GetAppInfo(&info);
 	BEntry entry(&(info.ref));
@@ -27,23 +28,29 @@ TypeItem::TypeItem(type_code code) : BStringItem("type") {
 		if (get_image_symbol(editor,"description",B_SYMBOL_TYPE_DATA,(void **)(&temp)) != B_NO_ERROR)
 			description = "Unknown";
 		else {
-			char *copy = new char[strlen(temp) + 1];
-			strcpy(copy,temp);
-			description = copy;
+			descbuf = new char[strlen(temp) + 1];
+			strcpy(descbuf,temp);
+			description = descbuf;
 		}
+		if (editor >= 0)
+			unload_add_on(editor);
 	}
 	char *tempy = new char[10 + strlen(description)];
 	sprintf(tempy,"%s (%s)",TypeCode(),description);
 	SetText(tempy);
+	delete [] tempy;
+}
+
+TypeItem::~TypeItem(void) {
+	delete [] descbuf;
 }
 
 char *
 TypeItem::TypeCode(void) {
 	type_code code = flipcode(type);
-	char *typea = new char[5];
-	strncpy(typea,(char *)(&code),4);
-	typea[4] = 0;
-	return typea;
+	strncpy(codebuf,(char *)(&code),4);
+	codebuf[4] = 0;
+	return codebuf;
 }
 
 void
@@ -381,6 +388,7 @@ void restypeview::MessageReceived(BMessage *msg) {
 	BOutlineListView::MessageReceived(msg);
 	reswindow *x = (reswindow *)(Window());
 	char *name;
+	char *ownedname = NULL;		//---allocated here, freed once the resource is added
 	type_code type;
 	void *dat;
 	ssize_t size;
@@ -399,7 +407,8 @@ void restypeview::MessageReceived(BMessage *msg) {
 					id = 0;
 				size_t size;
 				type_code *temp;
-				prev->FindData("type",(uint32)(B_UINT32_TYPE),(const void **)&temp,new ssize_t);
+				ssize_t typesize;
+				prev->FindData("type",(uint32)(B_UINT32_TYPE),(const void **)&temp,&typesize);
 				type = *temp;
 				entry_ref ref;
 				msg->FindRef("directory",&ref);
@@ -447,7 +456,8 @@ void restypeview::MessageReceived(BMessage *msg) {
 					id = 0;
 				size_t size;
 				type_code *temp;
-				prev->FindData("type",(uint32)(B_UINT32_TYPE),(const void **)&temp,new ssize_t);
+				ssize_t typesize;
+				prev->FindData("type",(uint32)(B_UINT32_TYPE),(const void **)&temp,&typesize);
 				type = *temp;
 				void *data;
 				bool isattr;
@@ -505,7 +515,7 @@ void restypeview::MessageReceived(BMessage *msg) {
 				msg->SendReply(reply,this);
 				return;
 			}
-			name = new char[B_FILE_NAME_LENGTH];
+			name = ownedname = new char[B_FILE_NAME_LENGTH];
 			BEntry(&ref).GetName(name);
 			BFile file(&ref, B_READ_ONLY);
 			BNodeInfo(&file).GetType(adname); 
@@ -582,15 +592,18 @@ void restypeview::MessageReceived(BMessage *msg) {
 				size++;
 			}
 			if (msg->FindString("be:clip_name",(const char **)(&name2)) == B_OK) {
-				name = new char[strlen(name2) + 1];
+				name = ownedname = new char[strlen(name2) + 1];
 				strcpy(name,name2);
-			} else
-				name = new char(0);
+			} else {
+				name = ownedname = new char[1];
+				name[0] = 0;
+			}
 		}
 	}
 	for(;x->openres->HasResource(type,id);id++) {}
 	AddResource(type,id,name,size_t(size),data,false,false);
 	delete [] data;
+	delete [] ownedname;
 	return;
 }
 
