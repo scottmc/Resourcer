@@ -56,7 +56,7 @@ MULTI_EDITOR_TARGETS  := $(addprefix editor-,$(MULTI_FILE_EDITORS))
 MAKEFILE_DIRS := main reslib editors \
 	$(addprefix editors/,$(MULTI_FILE_EDITORS))
 
-.PHONY: all app reslib editors clean help \
+.PHONY: all app reslib editors test clean help \
 	$(SINGLE_EDITOR_TARGETS) $(MULTI_EDITOR_TARGETS)
 
 all: app editors reslib
@@ -79,6 +79,14 @@ $(MULTI_EDITOR_TARGETS): editor-%:
 	@mkdir -p "$(EDITORS_OUT)"
 	$(MAKE) -C editors/$* TARGET_DIR="$(EDITORS_OUT)"
 
+# Compiles the sample resource file used for testing. It holds one resource
+# of most of the types Resourcer has editors for. Not part of "make all".
+test: $(BUILD_DIR)/test.rsrc
+
+$(BUILD_DIR)/test.rsrc: tests/test.rdef
+	@mkdir -p "$(BUILD_DIR)"
+	rc -o "$@" tests/test.rdef
+
 clean:
 	@for d in $(MAKEFILE_DIRS); do \
 		$(MAKE) -C $$d clean || exit 1; \
@@ -92,5 +100,6 @@ help:
 	@echo "  editors         build all editors"
 	@echo "  editor-<TYPE>   build one editor, e.g. editor-TEXT"
 	@echo "  reslib          build ResourceLib only"
+	@echo "  test            compile tests/test.rdef into $(BUILD_DIR)/test.rsrc"
 	@echo "  clean           remove all build output"
 	@echo "Results end up in $(BUILD_DIR)"

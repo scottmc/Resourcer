@@ -16,6 +16,18 @@ editors in the `editors` folder next to the application, so you can run
 
 * `make editor-TEXT` builds a single editor
 * `make app`, `make editors` and `make reslib` build just that part
+* `make test` compiles the sample resource file, see Testing below
 * `make clean` removes everything that was built
 
 The code is kept compatible with gcc2 (`x86_gcc2` hybrid builds of Haiku).
+
+## Testing
+
+`make test` compiles `tests/test.rdef` into `build/test.rsrc`. The file holds
+one resource of most of the types Resourcer has editors for (numbers, text,
+colors, rectangles, an application version and so on). Open it in Resourcer
+and double-click a resource to try its editor.
+
+![The resources in test.rsrc](docs/resourcer-list.png)
+
+![The APPV editor](docs/resourcer-appv-editor.png)
