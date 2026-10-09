@@ -656,3 +656,95 @@ void restypeview::DeleteSelection(DoubleItem *item) {
 	}
 	((reswindow *)(Window()))->changes = true;
 }
+
+void DoubleItem::Invoke(bool generic) {
+	reswindow *x = (reswindow *)parent->Window(); //----Context is important
+	bool genoverride = generic;					//------whether to use hex editor or not
+	if (win != NULL) {							//------If we are open, we only need to activate our window---
+		win->Hide();
+		win->Show();
+		win->Activate(true);
+		return;
+	}
+	app_info info;                        //-Find the editors directory
+	be_app->GetAppInfo(&info);            //-|
+	BEntry entry(&(info.ref));            //-|
+	BDirectory dir;						  //-|
+	entry.GetParent(&dir);				  //-|
+	entry.SetTo(&dir,"editors");          //-|
+	dir.SetTo(&entry);                    //-|
+	TypeItem *super = (TypeItem *)parent->Superitem(this);  //-Get our type code
+	type_code type = super->type;                           //-|
+	BPath path(&dir,super->TypeCode());					//--editors/typecode, the path of our editor
+	plug_in plugin;										//--handy little struct, holds useful information, the def is in preamble.h
+	plugin.win = x;                                     //-Set it up
+	entry.SetTo(path.Path());
+	BEntry entry2(&dir,"unknown");                      //-The hex editor
+	if ((entry.Exists() == false) || (genoverride == true)) { //-Do we not have an editor or do we want to use the hex editor?
+		if (entry2.Exists() == false) {                       //-Does the hex editor exist?
+			BAlert *alert = new BAlert("noedit","No editor found.","OK",NULL,NULL,B_WIDTH_AS_USUAL,B_STOP_ALERT); //-Yikes!
+			alert->Go();
+			return;
+		} else {
+			entry2.GetPath(&path); //--Let's use the hex editor
+		}
+	}
+	plugin.plugin = load_add_on(path.Path()); //--Load the add-on
+	BResources **tfile;
+	if (get_image_symbol(plugin.plugin,"file",B_SYMBOL_TYPE_DATA,(void **)(&tfile)) == B_NO_ERROR)
+		*tfile = x->openres;  //--------WIND uses this to get info on bits and CSTR resources
+	image_id *tplugin;
+	if (get_image_symbol(plugin.plugin,"me",B_SYMBOL_TYPE_DATA,(void **)(&tplugin)) == B_NO_ERROR)
+		*tplugin = plugin.plugin; //---No one uses, but you could to get your plug-in id
+	if (get_image_symbol(plugin.plugin,"loaddata",B_SYMBOL_TYPE_TEXT,(void **)(&(plugin.loaddata))) != B_NO_ERROR) {
+			BAlert *alert = new BAlert("noedit","The editor could not be launched.","OK",NULL,NULL,B_WIDTH_AS_USUAL,B_STOP_ALERT);
+			alert->Go();
+			return;         //---Load Data loads the data. If it doesn't exist, there's a problem
+	}
+	get_image_symbol(plugin.plugin,"savedata",B_SYMBOL_TYPE_TEXT,(void **)(&(plugin.savedata)));
+	get_image_symbol(plugin.plugin,"messaging",B_SYMBOL_TYPE_TEXT,(void **)(&(plugin.messaging)));
+	unsigned char *data; //---Send in our data, we'll delete it later
+	const void *dat;
+	size_t length;
+	if (idstring != NULL) {
+		dat = x->openres->LoadResource(type,id,&length);
+		if (dat == NULL) {
+			data = NULL;
+			length = 0;
+		} else {
+			data = new unsigned char[length];
+			memcpy(data,dat,length);
+		}
+	} else {
+		attr_info inf;
+		if (x->file->GetAttrInfo(name,&inf) == B_OK) {
+			length = inf.size;
+			data = new unsigned char[length];
+			x->file->ReadAttr(name,type,0,data,length);
+		} else {
+			data = NULL;
+			length = 0;
+		}
+	}
+	plugin.olddata = data;        //---To check if it's changed, we need the original data
+	plugin.oldlength = length;    //-|
+	char winname[255];            //--Set the window name
+	if (idstring == NULL)
+		sprintf(winname,"%s Attribute Name: %s",super->TypeCode(),name);
+	else {
+		if (name[0] == 0)
+			sprintf(winname,"%s Resource Id: %ld",super->TypeCode(),(long)id);
+		else
+			sprintf(winname,"%s Resource Id: %ld Name: %s",super->TypeCode(),(long)id,name);
+	}
+	pluginwindow *win = new pluginwindow(&(this->win),plugin,winname,id,type,name,(idstring == NULL));
+	win->gray = new BView(BRect(0,0,300,300),"graybkgrd",B_FOLLOW_ALL_SIDES,B_WILL_DRAW | B_FRAME_EVENTS);
+	win->gray->SetViewColor(216,216,216);
+	win->AddChild(win->gray);
+	if (length != 0) {	
+		(*(plugin.loaddata))(data,length,win->gray);  //--Send in data
+	} else {
+		(*(plugin.loaddata))(NULL,0,win->gray);       //--It's a new resource
+	}
+	win->Show();
+}
