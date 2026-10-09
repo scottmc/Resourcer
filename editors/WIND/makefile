@@ -38,7 +38,7 @@ SRCS := DragOutlineListView.cpp				\
 		MenuEditor.cpp						\
 		MenuListItem.cpp					\
 		ResourceIO.cpp						\
-		WIND.cp								\
+		WIND.cpp							\
 		WindowEditor.cpp					\
 		controls/BBoxEditor.cpp				\
 		controls/BButtonEditor.cpp			\

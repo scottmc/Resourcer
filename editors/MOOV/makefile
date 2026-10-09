@@ -13,7 +13,7 @@ NAME = MOOV
 TYPE = SHARED
 
 #	specify the source files to use
-SRCS = MOOV.cp \
+SRCS = MOOV.cpp \
 	AudioOutput.cpp \
 	DrawingTidbits.cpp \
 	MediaSlider.cpp \

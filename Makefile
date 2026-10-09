@@ -39,7 +39,7 @@ export BUILDHOME
 BUILD_DIR   := $(CURDIR)/build
 EDITORS_OUT := $(BUILD_DIR)/editors
 
-# Editors built from a single source file, editors/<TYPE>.cp (or .cpp),
+# Editors built from a single source file, editors/<TYPE>.cpp,
 # using the shared editors/makefile.
 SINGLE_FILE_EDITORS := \
 	APPF APPV BOOL BYTE CHAR CSTR CURS DBLE FLOT ICON LLNG LONG MICN MIME \
