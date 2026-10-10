@@ -12,6 +12,7 @@
 #include <interface/Window.h>
 #include <interface/MenuField.h>
 #include <interface/GridLayout.h>
+#include <interface/LayoutItem.h>
 #include <interface/SpaceLayoutItem.h>
 #include <interface/MenuItem.h>
 #include <interface/PopUpMenu.h>
@@ -106,15 +107,40 @@ loaddata(unsigned char* data, size_t length, BView* bkgview)
 	BGridLayout* grid = new BGridLayout(8, 4);
 	bkgview->SetLayout(grid);
 	grid->SetInsets(10, 10, 10, 10);
+	float menu_width = 0;
+	for (int i = 0; i < kNameCount; i++) {
+		float width = be_plain_font->StringWidth(kHorizontal[i].label);
+		if (width > menu_width)
+			menu_width = width;
+		width = be_plain_font->StringWidth(kVertical[i].label);
+		if (width > menu_width)
+			menu_width = width;
+	}
+	//	Item padding and the pop-up arrow grow with the font, so scale the
+	//	allowance with the font size instead of using a fixed amount.
+	float padding = be_plain_font->Size() * 3;
+	menu_width += padding > 40 ? padding : 40;
 	for (int i = 0; i < 2; i++) {
 		BMenuField* field = make_field(kNames[i], labels[i], lists[i], values[i]);
 		grid->AddItem(field->CreateLabelLayoutItem(), 0, i);
-		grid->AddItem(field->CreateMenuBarLayoutItem(), 1, i);
+		//	Size the menu for the longest name in either list so that changing
+		//	the selection never clips it.
+		BLayoutItem* menu = field->CreateMenuBarLayoutItem();
+		menu->SetExplicitMinSize(BSize(menu_width, B_SIZE_UNSET));
+		menu->SetExplicitPreferredSize(BSize(menu_width, B_SIZE_UNSET));
+		grid->AddItem(menu, 1, i);
 	}
 	grid->AddItem(BSpaceLayoutItem::CreateGlue(), 0, 2, 2, 1);
 
 	//	The host window is not layout managed, so size it to the content.
+	//	Ask for the minimum size first: the preferred size can come back as NaN
+	//	until the layout is validated, so the tests are written to replace a NaN.
+	BSize min = bkgview->MinSize();
 	BSize size = bkgview->PreferredSize();
+	if (!(size.width >= min.width))
+		size.width = min.width;
+	if (!(size.height >= min.height))
+		size.height = min.height;
 	bkgview->Window()->ResizeTo(size.width > 220 ? size.width : 220, size.height);
 }
 

@@ -62,7 +62,14 @@ loaddata(unsigned char* data, size_t length, BView* bkgview)
 	grid->AddItem(BSpaceLayoutItem::CreateGlue(), 0, kFieldCount, 2, 1);
 
 	//	The host window is not layout managed, so size it to the content.
+	//	Ask for the minimum size first: the preferred size can come back as NaN
+	//	until the layout is validated, so the tests are written to replace a NaN.
+	BSize min = bkgview->MinSize();
 	BSize size = bkgview->PreferredSize();
+	if (!(size.width >= min.width))
+		size.width = min.width;
+	if (!(size.height >= min.height))
+		size.height = min.height;
 	bkgview->Window()->ResizeTo(size.width > 220 ? size.width : 220, size.height);
 }
 

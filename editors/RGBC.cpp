@@ -4,6 +4,8 @@
 #include <stdio.h>
 #include <interface/ColorControl.h>
 #include <interface/Box.h>
+#include <interface/GroupLayout.h>
+#include <interface/Size.h>
 #include <app/MessageFilter.h>
 #include <support/ClassInfo.h>
 //-------------------------------------------
@@ -19,31 +21,51 @@ filter_result dummy_patch(BMessage *message,BHandler **target,BMessageFilter *me
 }
 
 void loaddata(unsigned char *data,size_t length,BView *bkgview) {//runs when add-on starts, window is initialized, you are expected to write to it: rect is 300 x 300
-	BColorControl *colorPicker = new BColorControl(BPoint(10,10),B_CELLS_32x8,8,"colorPicker",new BMessage('COLR'));
+	//	The colour control and the swatch are layout managed, so the swatch's
+	//	label is not clipped whatever font is in use.
+	BGroupLayout *group = new BGroupLayout(B_VERTICAL,10);
+	bkgview->SetLayout(group);
+	group->SetInsets(10,10,10,10);
+
+	BColorControl *colorPicker = new BColorControl(BPoint(0,0),B_CELLS_32x8,8,"colorPicker",new BMessage('COLR'));
 	BMessageFilter *filter = new BMessageFilter(B_ANY_DELIVERY,B_ANY_SOURCE,&dummy_patch);
 	colorPicker->SetTarget(bkgview->Window());
 	bkgview->Window()->AddFilter(filter);
-	float x,y;
-	colorPicker->GetPreferredSize(&x,&y);
-	x += 20; y += 60;
-	bkgview->Window()->ResizeTo(x,y);
 	if (length == 0) {
 		rgb_color white;
-		white.red = 0xff; white.blue = 0xff; white.green = 0xff;
+		white.red = 0xff; white.blue = 0xff; white.green = 0xff; white.alpha = 0xff;
 		colorPicker->SetValue(white);
 	} else {
 		colorPicker->SetValue(*((rgb_color *)(data)));
 	}
-	bkgview->AddChild(colorPicker);
-	BRect rect = BRect(colorPicker->Bounds().left+10,colorPicker->Bounds().bottom + 20,colorPicker->Bounds().right+10,colorPicker->Bounds().bottom+50);
-	BBox *color2 = new BBox(rect,"color");
-	rect.InsetBy(5,15);
-	rect.bottom += 10;
+	group->AddView(colorPicker);
+
+	BBox *color2 = new BBox("color");
 	color2->SetLabel("Color");
-	bkgview->AddChild(color2);
-	BView *color3 = new BView(color2->ConvertFromParent(rect),"color2",B_FOLLOW_NONE,B_WILL_DRAW);
+	BGroupLayout *boxlayout = new BGroupLayout(B_VERTICAL);
+	color2->SetLayout(boxlayout);
+	//	Leave room for the box's label above the swatch
+	font_height labelheight;
+	be_bold_font->GetHeight(&labelheight);
+	boxlayout->SetInsets(5,labelheight.ascent + labelheight.descent + labelheight.leading + 5,5,5);
+	BView *color3 = new BView("color2",B_WILL_DRAW);
 	color3->SetViewColor(colorPicker->ValueAsColor());
-	color2->AddChild(color3);
+	font_height height;
+	be_plain_font->GetHeight(&height);
+	color3->SetExplicitMinSize(BSize(B_SIZE_UNSET,(height.ascent + height.descent + height.leading) * 1.5));
+	boxlayout->AddView(color3);
+	group->AddView(color2);
+
+	//	The host window is not layout managed, so size it to the content.
+	//	Ask for the minimum size first: the preferred size can come back as NaN
+	//	until the layout is validated, so the tests are written to replace a NaN.
+	BSize min = bkgview->MinSize();
+	BSize size = bkgview->PreferredSize();
+	if (!(size.width >= min.width))
+		size.width = min.width;
+	if (!(size.height >= min.height))
+		size.height = min.height;
+	bkgview->Window()->ResizeTo(size.width,size.height);
 }
 
 unsigned char* savedata(size_t *length,BView *bkgview) { //return data, clean up, and set length to the size of data

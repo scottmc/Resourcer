@@ -61,6 +61,7 @@ void loaddata(unsigned char *data,size_t length,BView *bkgview) {
 		BTextControl *version = new BTextControl(names[i],i == 0 ? "Version:" : NULL,buffer,NULL);
 		if (i == 0)
 			grid->AddItem(version->CreateLabelLayoutItem(),0,0);
+		version->SetAlignment(B_ALIGN_LEFT,B_ALIGN_CENTER);
 		BLayoutItem *item = version->CreateTextViewLayoutItem();
 		item->SetExplicitMaxSize(BSize(number_width,B_SIZE_UNSET));
 		row->AddItem(item);
@@ -83,7 +84,10 @@ void loaddata(unsigned char *data,size_t length,BView *bkgview) {
 		if (width > menu_width)
 			menu_width = width;
 	}
-	menu_width += 40;		//item padding and the pop-up arrow
+	//	Item padding and the pop-up arrow grow with the font, so scale the
+	//	allowance with the font size instead of using a fixed amount.
+	float padding = be_plain_font->Size() * 3;
+	menu_width += padding > 40 ? padding : 40;
 	BLayoutItem *menu_item = variety->CreateMenuBarLayoutItem();
 	menu_item->SetExplicitMinSize(BSize(menu_width,B_SIZE_UNSET));
 	menu_item->SetExplicitPreferredSize(BSize(menu_width,B_SIZE_UNSET));
@@ -91,6 +95,7 @@ void loaddata(unsigned char *data,size_t length,BView *bkgview) {
 
 	sprintf(buffer,"%lu",(unsigned long)info->internal);
 	BTextControl *internal = new BTextControl("internal",NULL,buffer,NULL);
+	internal->SetAlignment(B_ALIGN_LEFT,B_ALIGN_CENTER);
 	BLayoutItem *internal_item = internal->CreateTextViewLayoutItem();
 	internal_item->SetExplicitMaxSize(BSize(number_width,B_SIZE_UNSET));
 	row->AddItem(internal_item);
@@ -110,11 +115,13 @@ void loaddata(unsigned char *data,size_t length,BView *bkgview) {
 	//	The host window is not layout managed, so size it to the content.
 	//	Use the larger of the minimum and preferred sizes so that nothing in the
 	//	version row is squeezed and the right inset is kept.
-	BSize size = bkgview->PreferredSize();
+	//	Ask for the minimum size first: the preferred size can come back as NaN
+	//	until the layout is validated, so the tests are written to replace a NaN.
 	BSize min = bkgview->MinSize();
-	if (size.width < min.width)
+	BSize size = bkgview->PreferredSize();
+	if (!(size.width >= min.width))
 		size.width = min.width;
-	if (size.height < min.height)
+	if (!(size.height >= min.height))
 		size.height = min.height;
 	//	Never let the window grow past the screen, whatever the layout asks for
 	//	(an empty resource used to make it far too wide).

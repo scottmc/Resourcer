@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <interface/TextControl.h>
 #include <interface/GridLayout.h>
+#include <interface/LayoutItem.h>
 #include <interface/SpaceLayoutItem.h>
 //-------------------------------------------
 
@@ -29,10 +30,21 @@ void loaddata(unsigned char *data,size_t length,BView *bkgview) {//runs when add
 	bkgview->SetLayout(grid);
 	grid->SetInsets(10,10,10,10);
 	grid->AddItem(v->CreateLabelLayoutItem(),0,0);
-	grid->AddItem(v->CreateTextViewLayoutItem(),1,0);
+	//	Room for the longest value this type can have, so it is never clipped
+	BLayoutItem *field = v->CreateTextViewLayoutItem();
+	field->SetExplicitMinSize(BSize(be_plain_font->StringWidth("-9223372036854775808") + 24,B_SIZE_UNSET));
+	field->SetExplicitPreferredSize(BSize(be_plain_font->StringWidth("-9223372036854775808") + 24,B_SIZE_UNSET));
+	grid->AddItem(field,1,0);
 	grid->AddItem(BSpaceLayoutItem::CreateGlue(),0,1,2,1);
 	//	The host window is not layout managed, so size it to the content.
+	//	Ask for the minimum size first: the preferred size can come back as NaN
+	//	until the layout is validated, so the tests are written to replace a NaN.
+	BSize min = bkgview->MinSize();
 	BSize size = bkgview->PreferredSize();
+	if (!(size.width >= min.width))
+		size.width = min.width;
+	if (!(size.height >= min.height))
+		size.height = min.height;
 	bkgview->Window()->ResizeTo(size.width > 220 ? size.width : 220,size.height);
 }
 
