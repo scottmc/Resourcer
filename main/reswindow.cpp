@@ -106,16 +106,18 @@ reswindow::reswindow(const char *title,entry_ref ref) : BWindow(gettiledrect(),t
 	res->AddItem(new BMenuItem("Open with Generic Editor",new BMessage(-800)));
 	this->res = new restypeview(openres);
 	BScrollView *resa = new ListScrollView("resa",this->res,B_WILL_DRAW | B_FRAME_EVENTS,false,true,B_NO_BORDER);
-	//	The resize knob is two pixels smaller than the scroll bar is thick (measured
-	//	against Terminal's scroll bar). B_H_SCROLL_BAR_HEIGHT is not font scaled,
-	//	so ask the bar itself; the preferred size can be NaN before the layout is
-	//	validated, hence the minimum size first and the NaN safe test.
+	//	The strip leaves room for the window's resize knob. Measured against
+	//	Terminal's scroll bar at font sizes 8, 18 and 24, the knob overlaps the
+	//	bottom edge of the bar by a pixel, which makes the strip two pixels less
+	//	than the bar is thick (14 at size 8, 21 at 18, 27 at 24). The preferred
+	//	size can be NaN before the layout is validated, hence the minimum size
+	//	first and the NaN safe test; B_H_SCROLL_BAR_HEIGHT is only the fallback.
 	float strip = B_H_SCROLL_BAR_HEIGHT;
 	BScrollBar *bar = resa->ScrollBar(B_VERTICAL);
 	if (bar != NULL) {
 		bar->MinSize();
 		float thickness = bar->PreferredSize().width - 2;
-		if (thickness >= strip)
+		if (thickness >= 1)
 			strip = thickness;
 	}
 	Lock();
