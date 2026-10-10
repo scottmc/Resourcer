@@ -29,6 +29,7 @@ class TypeItem : public BStringItem {
 class DoubleItem : public BListItem {
 	public:
 		DoubleItem(int32 resid,const char *resname,BOutlineListView *owner,bool isattr);
+		void Update(BView *owner, const BFont *font);
 		void DrawItem(BView *owner, BRect frame, bool complete = false);
 		void Invoke(bool generic = false);
 		~DoubleItem(void);

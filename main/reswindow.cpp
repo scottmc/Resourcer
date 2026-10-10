@@ -13,24 +13,35 @@ int32 copy(void *y);
 int32 getdata(void *y);
 int32 copytoattr(void *y);
 
-FillerView::FillerView(void) : BView(BRect(0,400-B_H_SCROLL_BAR_HEIGHT,350-B_V_SCROLL_BAR_WIDTH,400),"BottomFiller",B_FOLLOW_LEFT_RIGHT | B_FOLLOW_BOTTOM,B_WILL_DRAW | B_FRAME_EVENTS) {
-	Draw(Bounds());
+FillerView::FillerView(float height) : BView("BottomFiller",B_WILL_DRAW) {
+	SetViewColor(B_TRANSPARENT_COLOR);
+	SetExplicitMinSize(BSize(0,height));
+	SetExplicitPreferredSize(BSize(0,height));
+	SetExplicitMaxSize(BSize(B_SIZE_UNLIMITED,height));
 }
 
 void
 FillerView::Draw(BRect toUpdate) {
-	BRect temp = toUpdate;
-	temp.top = 2;
-	SetHighColor(216,216,216);
-	FillRect(temp);
-	SetHighColor(255,255,255);
-	temp.top = 2;
-	temp.bottom = 2;
-	FillRect(temp);
-	SetHighColor(152,152,152);
-	temp.top = 1;
-	temp.bottom = 1;
-	FillRect(temp);
+	rgb_color panel = ui_color(B_PANEL_BACKGROUND_COLOR);
+	SetHighColor(panel);
+	FillRect(toUpdate);
+}
+
+ListScrollView::ListScrollView(const char *name,BView *target,uint32 flags,bool horizontal,bool vertical,border_style border) : BScrollView(name,target,flags,horizontal,vertical,border) {
+}
+
+//	The scroll bar's top edge shares a line with the menu bar's bottom edge, as
+//	it does in Haiku's own apps (this is how Koder does it): after every layout
+//	pass move the bar up one pixel and make it one pixel taller, which leaves
+//	its bottom where it was.
+void
+ListScrollView::DoLayout(void) {
+	BScrollView::DoLayout();
+	BScrollBar *bar = ScrollBar(B_VERTICAL);
+	if (bar == NULL)
+		return;
+	bar->ResizeBy(0,1);
+	bar->MoveBy(0,-1);
 }
 
 BRect
@@ -43,7 +54,7 @@ reswindow::gettiledrect(void) {
 	return work;
 }
 
-reswindow::reswindow(const char *title,entry_ref ref) : BWindow(gettiledrect(),title,B_DOCUMENT_WINDOW,0/*B_ASYNCHRONOUS_CONTROLS*/) {
+reswindow::reswindow(const char *title,entry_ref ref) : BWindow(gettiledrect(),title,B_DOCUMENT_WINDOW,B_AUTO_UPDATE_SIZE_LIMITS) {
 	istempfile = false;
 	isquitting = false;
 	changes = false;
@@ -54,13 +65,15 @@ reswindow::reswindow(const char *title,entry_ref ref) : BWindow(gettiledrect(),t
 		return;
 	}
 	openmwindows++;
-	Show(); 
-	menus = new BMenuBar(BRect(0,0,600,5),"Menus");
-	AddChild(menus);
-	Lock();
-	mbheight = (int32)(menus->Bounds().bottom);
-	Unlock();
-	AddChild(new FillerView);
+	//	The window is layout managed: menu bar on top, the list filling the rest.
+	//	It is shown at the end, once everything is in place.
+	BGroupLayout *layout = new BGroupLayout(B_VERTICAL,0);
+	SetLayout(layout);
+	//	A right inset of -1 lets the content run one pixel under the window frame,
+	//	so the scroll bar's right edge and the frame's edge are drawn once.
+	layout->SetInsets(0,0,-1,0);
+	menus = new BMenuBar("Menus");
+	layout->AddView(menus);
 	BMenu *file = new BMenu("File");
 	menus->AddItem(file);
 	file->AddItem(new BMenuItem("About Resourcer...",new BMessage(B_ABOUT_REQUESTED)));
@@ -92,13 +105,65 @@ reswindow::reswindow(const char *title,entry_ref ref) : BWindow(gettiledrect(),t
 	res->AddItem(new BSeparatorItem);
 	res->AddItem(new BMenuItem("Open with Generic Editor",new BMessage(-800)));
 	this->res = new restypeview(openres);
-	BScrollView *resa = new BScrollView("resa",this->res,B_FOLLOW_ALL_SIDES,0,false,true,B_NO_BORDER);
-	AddChild(resa);
-	this->res->SelectionChanged();
+	BScrollView *resa = new ListScrollView("resa",this->res,B_WILL_DRAW | B_FRAME_EVENTS,false,true,B_NO_BORDER);
+	//	The resize knob is two pixels smaller than the scroll bar is thick (measured
+	//	against Terminal's scroll bar). B_H_SCROLL_BAR_HEIGHT is not font scaled,
+	//	so ask the bar itself; the preferred size can be NaN before the layout is
+	//	validated, hence the minimum size first and the NaN safe test.
+	float strip = B_H_SCROLL_BAR_HEIGHT;
+	BScrollBar *bar = resa->ScrollBar(B_VERTICAL);
+	if (bar != NULL) {
+		bar->MinSize();
+		float thickness = bar->PreferredSize().width - 2;
+		if (thickness >= strip)
+			strip = thickness;
+	}
 	Lock();
+	layout->AddView(resa);
+	layout->AddView(new FillerView(strip));
+	this->res->SelectionChanged();
 	this->res->MakeFocus(true);
-	if (IsLocked())
-		Unlock();
+	Unlock();
+	//	Start wide enough for the widest row, but never smaller than the menu
+	//	bar needs, never smaller than the 350 x 400 default and never wider than
+	//	the screen. Rows are measured with the plain font; an outline row is
+	//	indented by about three characters per level.
+	float widest = 0;
+	float indent = be_plain_font->Size() * 3;
+	for (int32 i = 0;i < this->res->CountItems();i++) {
+		BListItem *item = this->res->ItemAt(i);
+		const char *text = NULL;
+		float extra = 0;
+		if (is_kind_of(item,BStringItem)) {
+			text = ((BStringItem *)item)->Text();
+		} else if (is_kind_of(item,DoubleItem)) {
+			DoubleItem *row = (DoubleItem *)item;
+			text = row->name;
+			if (row->idstring != NULL)
+				extra = be_plain_font->StringWidth("00000") + 10;
+		}
+		if (text == NULL)
+			continue;
+		float rowwidth = (item->OutlineLevel() + 1) * indent + extra + be_plain_font->StringWidth(text);
+		if (rowwidth > widest)
+			widest = rowwidth;
+	}
+	BScrollBar *vbar = resa->ScrollBar(B_VERTICAL);
+	if (vbar != NULL) {
+		float barwidth = vbar->MinSize().width;
+		if (barwidth >= 0)
+			widest += barwidth;
+	}
+	BRect screen = BScreen(this).Frame();
+	BSize min = layout->MinSize();
+	float width = min.width > 350 ? min.width : 350;
+	if (widest > width)
+		width = widest;
+	if (width > screen.Width() - 20)
+		width = screen.Width() - 20;
+	float height = min.height > 400 ? min.height : 400;
+	ResizeTo(width,height);
+	Show();
 }
 
 void

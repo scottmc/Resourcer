@@ -73,6 +73,15 @@ DoubleItem::DoubleItem(int32 resid,const char *resname,BOutlineListView *owner,b
 	parent = owner;
 }
 
+//	The row height follows the font, as it does for the type rows
+void
+DoubleItem::Update(BView *owner, const BFont *font) {
+	BListItem::Update(owner,font);
+	font_height height;
+	font->GetHeight(&height);
+	SetHeight(ceilf(height.ascent) + ceilf(height.descent) + ceilf(height.leading) + 2);
+}
+
 void
 DoubleItem::DrawItem(BView *owner, BRect frame, bool complete) {
 	if (IsSelected()) {
@@ -82,11 +91,19 @@ DoubleItem::DrawItem(BView *owner, BRect frame, bool complete) {
 		owner->SetHighColor(255,255,255);
 	owner->FillRect(frame);
 	owner->SetHighColor(0,0,0);
+
+	//	Centre the text vertically in the row and scale the id column with the
+	//	font instead of using fixed pixel offsets.
+	font_height height;
+	owner->GetFontHeight(&height);
+	float text_height = ceilf(height.ascent) + ceilf(height.descent);
+	float baseline = frame.top + (frame.Height() - text_height) / 2 + ceilf(height.ascent);
 	if (idstring != NULL) {
-		owner->DrawString(idstring,BPoint(frame.left + 5,frame.top + 10));
-		owner->DrawString(name,BPoint(frame.left + 50,frame.top + 10));
+		float name_left = frame.left + 5 + owner->StringWidth("00000") + 10;
+		owner->DrawString(idstring,BPoint(frame.left + 5,baseline));
+		owner->DrawString(name,BPoint(name_left,baseline));
 	} else {
-		owner->DrawString(name,BPoint(frame.left + 5,frame.top + 10));
+		owner->DrawString(name,BPoint(frame.left + 5,baseline));
 	}
 	owner->SetLowColor(255,255,255);
 }
@@ -125,7 +142,7 @@ int sortList(const BListItem *one,const BListItem *two) {
 	return 0;
 }
 
-restypeview::restypeview(BResources *openres) : BOutlineListView(BRect(0,1 + mbheight,350 - B_V_SCROLL_BAR_WIDTH,400 - B_H_SCROLL_BAR_HEIGHT),"restype",B_SINGLE_SELECTION_LIST,B_FOLLOW_ALL_SIDES) {
+restypeview::restypeview(BResources *openres) : BOutlineListView("restype",B_SINGLE_SELECTION_LIST) {
 	Init(openres);
 	SetInvocationMessage(new BMessage('rsiv'));
 }
