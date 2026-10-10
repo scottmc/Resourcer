@@ -11,6 +11,8 @@
 #include <image.h>
 #include <interface/Window.h>
 #include <interface/MenuField.h>
+#include <interface/GridLayout.h>
+#include <interface/SpaceLayoutItem.h>
 #include <interface/MenuItem.h>
 #include <interface/PopUpMenu.h>
 
@@ -40,10 +42,11 @@ static const alignment_name kVertical[] = {
 	{ "Use full height", -2 }
 };
 static const int kNameCount = 5;
+static const char* const kNames[2] = { "BAlignment::horizontal", "BAlignment::vertical" };
 
 //	A value that is not in the list is kept as an extra item, so it is not lost
 static BMenuField*
-make_field(BRect frame, const char* name, const char* label,
+make_field(const char* name, const char* label,
 	const alignment_name* names, int32 value)
 {
 	BPopUpMenu* menu = new BPopUpMenu(label);
@@ -63,8 +66,7 @@ make_field(BRect frame, const char* name, const char* label,
 		item->SetMarked(true);
 		menu->AddItem(item);
 	}
-	BMenuField* field = new BMenuField(frame, name, label, menu);
-	field->SetDivider(be_plain_font->StringWidth("Horizontal: "));
+	BMenuField* field = new BMenuField(name, label, menu);
 	return field;
 }
 
@@ -72,6 +74,8 @@ static int32
 selected_value(BView* view, const alignment_name* names)
 {
 	BMenuField* field = (BMenuField*)view;
+	if (field == NULL)
+		return -1;
 	BMenuItem* marked = field->Menu()->FindMarked();
 	if (marked == NULL)
 		return -1;
@@ -95,11 +99,23 @@ loaddata(unsigned char* data, size_t length, BView* bkgview)
 	if (length == sizeof (values) && data != NULL)
 		memcpy(values, data, sizeof (values));
 
-	bkgview->AddChild(make_field(BRect(10, 5, 280, 25), "BAlignment::horizontal",
-		"Horizontal: ", kHorizontal, values[0]));
-	bkgview->AddChild(make_field(BRect(10, 35, 280, 55), "BAlignment::vertical",
-		"Vertical: ", kVertical, values[1]));
-	bkgview->Window()->ResizeTo(300, 65);
+	static const char* const labels[2] = { "Horizontal:", "Vertical:" };
+	const alignment_name* const lists[2] = { kHorizontal, kVertical };
+
+	//	The layout manager sizes the labels and menus from the current font.
+	BGridLayout* grid = new BGridLayout(8, 4);
+	bkgview->SetLayout(grid);
+	grid->SetInsets(10, 10, 10, 10);
+	for (int i = 0; i < 2; i++) {
+		BMenuField* field = make_field(kNames[i], labels[i], lists[i], values[i]);
+		grid->AddItem(field->CreateLabelLayoutItem(), 0, i);
+		grid->AddItem(field->CreateMenuBarLayoutItem(), 1, i);
+	}
+	grid->AddItem(BSpaceLayoutItem::CreateGlue(), 0, 2, 2, 1);
+
+	//	The host window is not layout managed, so size it to the content.
+	BSize size = bkgview->PreferredSize();
+	bkgview->Window()->ResizeTo(size.width > 220 ? size.width : 220, size.height);
 }
 
 //	Return data, clean up, and set length to the size of data
@@ -107,8 +123,8 @@ unsigned char*
 savedata(size_t* length, BView* bkgview)
 {
 	int32 values[2];
-	values[0] = selected_value(bkgview->ChildAt(0), kHorizontal);
-	values[1] = selected_value(bkgview->ChildAt(1), kVertical);
+	values[0] = selected_value(bkgview->FindView(kNames[0]), kHorizontal);
+	values[1] = selected_value(bkgview->FindView(kNames[1]), kVertical);
 	*length = sizeof (values);
 	unsigned char* data = new unsigned char[sizeof (values)];
 	memcpy(data, values, sizeof (values));

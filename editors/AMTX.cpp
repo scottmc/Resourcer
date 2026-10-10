@@ -10,6 +10,8 @@
 #include <image.h>
 #include <interface/Window.h>
 #include <interface/TextControl.h>
+#include <interface/GridLayout.h>
+#include <interface/SpaceLayoutItem.h>
 
 extern "C" _EXPORT void loaddata(unsigned char*, size_t, BView*);
 extern "C" _EXPORT unsigned char* savedata(size_t*, BView*);
@@ -29,6 +31,9 @@ format_value(double value, char* buffer, size_t size)
 }
 
 static const int kFieldCount = 6;
+static const char* const kNames[kFieldCount] = { "BAffineTransform::sx",
+	"BAffineTransform::shy", "BAffineTransform::shx", "BAffineTransform::sy",
+	"BAffineTransform::tx", "BAffineTransform::ty" };
 
 //	Runs when the add-on starts. The window is initialized, you are expected
 //	to write to it: the view is 300 x 300
@@ -41,18 +46,24 @@ loaddata(unsigned char* data, size_t length, BView* bkgview)
 	if (length == sizeof (values) && data != NULL)
 		memcpy(values, data, sizeof (values));
 
-	static const char* const labels[kFieldCount] = { "sx: ", "shy: ", "shx: ", "sy: ", "tx: ", "ty: " };
-	static const char* const names[kFieldCount] = { "BAffineTransform::sx", "BAffineTransform::shy", "BAffineTransform::shx", "BAffineTransform::sy", "BAffineTransform::tx", "BAffineTransform::ty" };
-	BRect frame(10, 5, 280, 25);
+	static const char* const labels[kFieldCount] = { "sx:", "shy:", "shx:", "sy:", "tx:", "ty:" };
+
+	//	The layout manager sizes the labels and fields from the current font.
+	BGridLayout* grid = new BGridLayout(8, 4);
+	bkgview->SetLayout(grid);
+	grid->SetInsets(10, 10, 10, 10);
 	for (int i = 0; i < kFieldCount; i++) {
 		char text[40];
 		format_value(values[i], text, sizeof (text));
-		BTextControl* v = new BTextControl(frame, names[i], labels[i], text, NULL);
-		v->SetDivider(be_plain_font->StringWidth("shy: "));
-		bkgview->AddChild(v);
-		frame.OffsetBy(0, 25);
+		BTextControl* v = new BTextControl(kNames[i], labels[i], text, NULL);
+		grid->AddItem(v->CreateLabelLayoutItem(), 0, i);
+		grid->AddItem(v->CreateTextViewLayoutItem(), 1, i);
 	}
-	bkgview->Window()->ResizeTo(300, frame.top + 5);
+	grid->AddItem(BSpaceLayoutItem::CreateGlue(), 0, kFieldCount, 2, 1);
+
+	//	The host window is not layout managed, so size it to the content.
+	BSize size = bkgview->PreferredSize();
+	bkgview->Window()->ResizeTo(size.width > 220 ? size.width : 220, size.height);
 }
 
 //	Return data, clean up, and set length to the size of data
@@ -61,7 +72,9 @@ savedata(size_t* length, BView* bkgview)
 {
 	double values[kFieldCount];
 	for (int i = 0; i < kFieldCount; i++) {
-		BTextControl* text = (BTextControl*)(bkgview->ChildAt(i));
+		BTextControl* text = (BTextControl*)(bkgview->FindView(kNames[i]));
+		if (text == NULL)
+			continue;
 		values[i] = (double)strtod(text->Text(), NULL);
 	}
 	*length = sizeof (values);
