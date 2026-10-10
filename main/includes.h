@@ -14,7 +14,9 @@
 #include <storage/FilePanel.h>
 #include <interface/Alert.h>
 #include <interface/Button.h>
+#include <interface/GridLayout.h>
 #include <interface/GroupLayout.h>
+#include <interface/SpaceLayoutItem.h>
 #include <interface/Size.h>
 #include <interface/MenuField.h>
 #include <interface/MenuBar.h>

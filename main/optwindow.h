@@ -13,7 +13,6 @@ class optwindow : public BWindow {
 		void changeinfo(void);
 		void MessageReceived(BMessage *message);
 	private:
-		BView *gray;
 		BTextControl *type;
 		BTextControl *id;
 		BTextControl *name;

@@ -7,35 +7,53 @@
 #include "reswindow.h"
 #include "optwindow.h"
 
-optwindow::optwindow(bool add,DoubleItem* to,type_code typex,reswindow *x) : BWindow(BRect(find_center(400,140).left,find_center(200,140).top - 150,find_center(400,140).right,find_center(200,140).bottom - 150),"Change Resource Properties",B_FLOATING_WINDOW_LOOK,B_MODAL_APP_WINDOW_FEEL,B_NOT_RESIZABLE | B_NOT_ZOOMABLE/* | B_ASYNCHRONOUS_CONTROLS*/) {
+optwindow::optwindow(bool add,DoubleItem* to,type_code typex,reswindow *x) : BWindow(BRect(100,100,500,240),"Change Resource Properties",B_FLOATING_WINDOW_LOOK,B_MODAL_APP_WINDOW_FEEL,B_NOT_ZOOMABLE | B_AUTO_UPDATE_SIZE_LIMITS) {
 	AddShortcut('W',0,new BMessage(B_QUIT_REQUESTED),this);
 	AddShortcut('.',0,new BMessage(B_QUIT_REQUESTED),this);
 	win = x;
-	gray = new BView(Bounds(),"graybkgrd",B_FOLLOW_ALL_SIDES,B_WILL_DRAW | B_FRAME_EVENTS);
-	gray->SetViewColor(216,216,216);
+	//	The window is layout managed, so labels and fields are sized from the
+	//	current font and nothing overlaps or is clipped whatever size it is.
+	BGroupLayout *top = new BGroupLayout(B_VERTICAL,10);
+	SetLayout(top);
+	top->SetInsets(10,10,10,10);
+	top->Owner()->SetViewUIColor(B_PANEL_BACKGROUND_COLOR);
+	BGridLayout *grid = new BGridLayout(8,6);
+	top->AddItem(grid);
+	float fieldwidth = be_plain_font->StringWidth("M") * 24;
 	if (add) {
 		SetTitle("New Resource Properties");
 		BPopUpMenu *attrmenu = new BPopUpMenu("Resource");
 		attrmenu->AddItem(new BMenuItem("Resource",new BMessage('resr')));
 		attrmenu->AddItem(new BMenuItem("Attribute",new BMessage('attr')));
-		BMenuField *attrchoice = new BMenuField(BRect(10,9,390,29),"attrchoice","Data Format: ",attrmenu);
-		attrchoice->SetDivider(be_plain_font->StringWidth("Data Format: "));
-		gray->AddChild(attrchoice);
-		type = new BTextControl(BRect(10,34,be_plain_font->StringWidth("AAAA")+be_plain_font->StringWidth("Data Type: ")+20,54),"Type","Data Type: ","",new BMessage('tyc2'));
-		type->SetDivider(be_plain_font->StringWidth("Data Type: "));
+		BMenuField *attrchoice = new BMenuField("attrchoice","Data Format:",attrmenu);
+		grid->AddItem(attrchoice->CreateLabelLayoutItem(),0,0);
+		grid->AddItem(attrchoice->CreateMenuBarLayoutItem(),1,0,2,1);
+		type = new BTextControl("Type","Data Type:","",new BMessage('tyc2'));
 		type->TextView()->SetMaxBytes(4);
 		BPopUpMenu *typemenu = new BPopUpMenu("Available Data Types",false,false);
 		init_typemenu(typemenu);
-		BMenuField *typechoice = new BMenuField(BRect(be_plain_font->StringWidth("AAAA")+be_plain_font->StringWidth("Data Type: ")+40,34,390,54),"typechoice","",typemenu);
-		typechoice->SetDivider(0);
-		gray->AddChild(typechoice);
-		gray->AddChild(type);
-		id = new BTextControl(BRect(10,56,390,76),"ID","ID: ","",NULL);
-		id->SetDivider(be_plain_font->StringWidth("ID: "));
-		gray->AddChild(id);
-		name = new BTextControl(BRect(10,78,390,98),"Name","Name: ",NULL,NULL);
-		name->SetDivider(be_plain_font->StringWidth("Name: "));
-		gray->AddChild(name);
+		BMenuField *typechoice = new BMenuField("typechoice","",typemenu);
+		grid->AddItem(type->CreateLabelLayoutItem(),0,1);
+		BLayoutItem *typefield = type->CreateTextViewLayoutItem();
+		float typewidth = be_plain_font->StringWidth("WWWW") + 24;
+		typefield->SetExplicitMinSize(BSize(typewidth,B_SIZE_UNSET));
+		typefield->SetExplicitPreferredSize(BSize(typewidth,B_SIZE_UNSET));
+		typefield->SetExplicitMaxSize(BSize(typewidth,B_SIZE_UNSET));
+		grid->AddItem(typefield,1,1);
+		//	A menu field only lays itself out when it is given both of its layout
+		//	items, so this one gets an (empty) label item next to its menu.
+		BGroupLayout *typepart = new BGroupLayout(B_HORIZONTAL,0);
+		grid->AddItem(typepart,2,1);
+		typepart->AddItem(typechoice->CreateLabelLayoutItem());
+		typepart->AddItem(typechoice->CreateMenuBarLayoutItem());
+		id = new BTextControl("ID","ID:","",NULL);
+		grid->AddItem(id->CreateLabelLayoutItem(),0,2);
+		grid->AddItem(id->CreateTextViewLayoutItem(),1,2,2,1);
+		name = new BTextControl("Name","Name:",NULL,NULL);
+		BLayoutItem *namefield = name->CreateTextViewLayoutItem();
+		namefield->SetExplicitPreferredSize(BSize(fieldwidth,B_SIZE_UNSET));
+		grid->AddItem(name->CreateLabelLayoutItem(),0,3);
+		grid->AddItem(namefield,1,3,2,1);
 		willberes = true;
 	} else {
 		char ida[255];
@@ -54,9 +72,9 @@ optwindow::optwindow(bool add,DoubleItem* to,type_code typex,reswindow *x) : BWi
 		if (to->idstring == NULL) {
 			attritem->SetMarked(true);
 		}
-		BMenuField *attrchoice = new BMenuField(BRect(10,9,190,29),"attrchoice","Data Format: ",attrmenu);
-		attrchoice->SetDivider(be_plain_font->StringWidth("Data Format: "));
-		gray->AddChild(attrchoice);
+		BMenuField *attrchoice = new BMenuField("attrchoice","Data Format:",attrmenu);
+		grid->AddItem(attrchoice->CreateLabelLayoutItem(),0,0);
+		grid->AddItem(attrchoice->CreateMenuBarLayoutItem(),1,0);
 		size_t len;
 		char *bogus;
 		attr_info inf;
@@ -66,16 +84,20 @@ optwindow::optwindow(bool add,DoubleItem* to,type_code typex,reswindow *x) : BWi
 			x->file->GetAttrInfo(to->name,&inf);
 			len = inf.size;
 		}
-		gray->AddChild(new BStringView(BRect(210,9,390,29),"Size",parse_size(len),B_FOLLOW_RIGHT | B_FOLLOW_TOP));
-		id = new BTextControl(BRect(10,43,390,63),"ID","ID: ",ida,NULL);
-		id->SetDivider(be_plain_font->StringWidth("ID: "));
+		BStringView *sizeview = new BStringView("Size",parse_size(len));
+		sizeview->SetAlignment(B_ALIGN_RIGHT);
+		grid->AddView(sizeview,2,0);
+		id = new BTextControl("ID","ID:",ida,NULL);
 		if (to->idstring == NULL) {
 			id->SetEnabled(false);
 		}
-		gray->AddChild(id);
-		name = new BTextControl(BRect(10,77,390,97),"Name","Name: ",to->name,NULL);
-		name->SetDivider(be_plain_font->StringWidth("Name: "));
-		gray->AddChild(name);
+		grid->AddItem(id->CreateLabelLayoutItem(),0,1);
+		grid->AddItem(id->CreateTextViewLayoutItem(),1,1,2,1);
+		name = new BTextControl("Name","Name:",to->name,NULL);
+		BLayoutItem *namefield = name->CreateTextViewLayoutItem();
+		namefield->SetExplicitPreferredSize(BSize(fieldwidth,B_SIZE_UNSET));
+		grid->AddItem(name->CreateLabelLayoutItem(),0,2);
+		grid->AddItem(namefield,1,2,2,1);
 		if (to->idstring == NULL)
 			willberes = false;
 		else
@@ -84,11 +106,28 @@ optwindow::optwindow(bool add,DoubleItem* to,type_code typex,reswindow *x) : BWi
 	whattodo = add;
 	toop = to;
 	typeb = typex;
-	gray->AddChild(new BButton(BRect(240,110,300,130),"Cancel","Cancel",new BMessage(B_QUIT_REQUESTED)));
-	BButton *OK = new BButton(BRect(320,110,380,130),"OK","OK",new BMessage('bxok'));
-	gray->AddChild(OK);
+	BGroupLayout *buttons = new BGroupLayout(B_HORIZONTAL,8);
+	top->AddItem(buttons);
+	buttons->AddItem(BSpaceLayoutItem::CreateGlue());
+	buttons->AddView(new BButton("Cancel","Cancel",new BMessage(B_QUIT_REQUESTED)));
+	BButton *OK = new BButton("OK","OK",new BMessage('bxok'));
+	buttons->AddView(OK);
 	OK->MakeDefault(true);
-	AddChild(gray);
+	//	Open at the size the contents need (the preferred size can be NaN before
+	//	the layout is validated, so ask for the minimum first), within the
+	//	screen, and a little above the middle as before.
+	BSize min = top->MinSize();
+	BSize size = top->PreferredSize();
+	if (!(size.width >= min.width))
+		size.width = min.width;
+	if (!(size.height >= min.height))
+		size.height = min.height;
+	BRect screen = BScreen(this).Frame();
+	if (size.width > screen.Width() - 20)
+		size.width = screen.Width() - 20;
+	BRect where = find_center((uint32)size.width,(uint32)size.height);
+	ResizeTo(size.width,size.height);
+	MoveTo(where.left,where.top - 150);
 	Show();
 }
 
