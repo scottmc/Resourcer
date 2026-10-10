@@ -3,6 +3,8 @@
 #include <interface/Window.h>
 #include <stdio.h>
 #include <interface/TextControl.h>
+#include <interface/GridLayout.h>
+#include <interface/SpaceLayoutItem.h>
 #include <storage/MimeType.h>
 //-------------------------------------------
 
@@ -22,14 +24,21 @@ void loaddata(unsigned char *data,size_t length,BView *bkgview) {//runs when add
 		strcpy(mime,dataa);
 	}
 	BMimeType type(mime);
-	bkgview->Window()->ResizeTo(300,40);
-	BTextControl *v = new BTextControl(BRect(20,5,280,35),"Data","MIME Type: ",mime,NULL);
-	v->SetDivider(be_plain_font->StringWidth("MIME Type: "));
-	bkgview->AddChild(v);
+	//	The layout manager sizes the label and field from the current font.
+	BTextControl *v = new BTextControl("Data","MIME Type:",mime,NULL);
+	BGridLayout *grid = new BGridLayout(8,4);
+	bkgview->SetLayout(grid);
+	grid->SetInsets(10,10,10,10);
+	grid->AddItem(v->CreateLabelLayoutItem(),0,0);
+	grid->AddItem(v->CreateTextViewLayoutItem(),1,0);
+	grid->AddItem(BSpaceLayoutItem::CreateGlue(),0,1,2,1);
+	//	The host window is not layout managed, so size it to the content.
+	BSize size = bkgview->PreferredSize();
+	bkgview->Window()->ResizeTo(size.width > 280 ? size.width : 280,size.height);
 }
 
 unsigned char* savedata(size_t *length,BView *bkgview) { //return data, clean up, and set length to the size of data
-	BTextControl *text = (BTextControl *)(bkgview->ChildAt(0));
+	BTextControl *text = (BTextControl *)(bkgview->FindView("Data"));
 	char *data = new char[strlen(text->Text()) + 1];
 	strcpy(data,text->Text());
 	*length = strlen(data) + 1;
