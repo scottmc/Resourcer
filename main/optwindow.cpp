@@ -170,6 +170,18 @@ optwindow::parse_size(size_t sizer) {
 
 void
 optwindow::add(void) {
+	bool notype = true;			//---a type of nothing but spaces is as good as none
+	for (const char *c = type->Text(); *c != 0; c++) {
+		if (*c != ' ') {
+			notype = false;
+			break;
+		}
+	}
+	if (notype) {
+		(new BAlert("alert","Please enter a data type of up to four characters, for example TEXT or LONG.","OK",NULL,NULL,B_WIDTH_AS_USUAL,B_STOP_ALERT))->Go();
+		type->MakeFocus(true);
+		return;
+	}
 	Lock();
 	int32 test = 1;
 	long value;
