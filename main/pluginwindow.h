@@ -3,7 +3,7 @@
 
 class pluginwindow : public BWindow {
 	public:
-		pluginwindow(pluginwindow **reg,plug_in plugin1,char *name,int32 resid,type_code type,char *xname,bool isattr);
+		pluginwindow(pluginwindow **reg,plug_in plugin1,char *name,int32 resid,type_code type,char *xname,bool isattr,bool resizable);
 		void RemoveChildren(void);
 		bool QuitRequested(void);
 		void MessageReceived(BMessage *message);

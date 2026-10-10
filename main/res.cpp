@@ -750,7 +750,12 @@ void DoubleItem::Invoke(bool generic) {
 		else
 			sprintf(winname,"%s Resource Id: %ld Name: %s",super->TypeCode(),(long)id,name);
 	}
-	pluginwindow *win = new pluginwindow(&(this->win),plugin,winname,id,type,name,(idstring == NULL));
+	//--An editor can export "const bool resizable = true" to get a resizable window
+	bool *resizable = NULL;
+	bool canresize = false;
+	if (get_image_symbol(plugin.plugin,"resizable",B_SYMBOL_TYPE_DATA,(void **)(&resizable)) == B_NO_ERROR && resizable != NULL)
+		canresize = *resizable;
+	pluginwindow *win = new pluginwindow(&(this->win),plugin,winname,id,type,name,(idstring == NULL),canresize);
 	win->gray = new BView(BRect(0,0,300,300),"graybkgrd",B_FOLLOW_ALL_SIDES,B_WILL_DRAW | B_FRAME_EVENTS);
 	win->gray->SetViewColor(216,216,216);
 	win->AddChild(win->gray);
@@ -759,5 +764,30 @@ void DoubleItem::Invoke(bool generic) {
 	} else {
 		(*(plugin.loaddata))(NULL,0,win->gray);       //--It's a new resource
 	}
+	//--Whatever size the editor asked for, keep the whole window on the screen
+	BRect screen = BScreen(win).Frame();
+	BRect frame = win->Frame();
+	if (frame.Width() > screen.Width() - 20 || frame.Height() > screen.Height() - 60)
+	{
+		float width = frame.Width();
+		float height = frame.Height();
+		if (width > screen.Width() - 20)
+			width = screen.Width() - 20;
+		if (height > screen.Height() - 60)
+			height = screen.Height() - 60;
+		win->ResizeTo(width,height);
+	}
+	frame = win->Frame();
+	float shiftx = 0, shifty = 0;
+	if (frame.right > screen.right - 10)
+		shiftx = screen.right - 10 - frame.right;
+	if (frame.left + shiftx < screen.left + 10)
+		shiftx = screen.left + 10 - frame.left;
+	if (frame.bottom > screen.bottom - 10)
+		shifty = screen.bottom - 10 - frame.bottom;
+	if (frame.top + shifty < screen.top + 30)
+		shifty = screen.top + 30 - frame.top;
+	if (shiftx != 0 || shifty != 0)
+		win->MoveBy(shiftx,shifty);
 	win->Show();
 }

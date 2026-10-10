@@ -7,7 +7,7 @@
 #include "reswindow.h"
 #include "pluginwindow.h"
 
-pluginwindow::pluginwindow(pluginwindow **reg,plug_in plugin1,char *name,int32 resid,type_code type,char *xname,bool isattr) : BWindow(BRect(400,300,700,600),name,B_TITLED_WINDOW,B_NOT_RESIZABLE | B_NOT_ZOOMABLE/* | B_ASYNCHRONOUS_CONTROLS*/) {
+pluginwindow::pluginwindow(pluginwindow **reg,plug_in plugin1,char *name,int32 resid,type_code type,char *xname,bool isattr,bool resizable) : BWindow(BRect(400,300,700,600),name,B_TITLED_WINDOW,resizable ? 0 : (B_NOT_RESIZABLE | B_NOT_ZOOMABLE)/* | B_ASYNCHRONOUS_CONTROLS*/) {
 	registration = reg;
 	*registration = this;
 	plugin = plugin1;
@@ -20,17 +20,13 @@ pluginwindow::pluginwindow(pluginwindow **reg,plug_in plugin1,char *name,int32 r
 
 void
 pluginwindow::RemoveChildren(void) {
-	BView *view;
-	for (int32 x = 0;;) {
-		view = gray->ChildAt(x);
-		if (view == NULL) {
-			break;
-		}
-		view->RemoveSelf();
-		delete view;
-	}
+	//	Deleting the view deletes its children and its layout together, in the
+	//	right order. The children used to be deleted one by one first, which
+	//	left a layout-managed editor's layout items pointing at freed views and
+	//	crashed with a double free when the window was destroyed.
 	gray->RemoveSelf();
 	delete gray;
+	gray = NULL;
 }
 
 bool
