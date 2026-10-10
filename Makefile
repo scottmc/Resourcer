@@ -42,9 +42,9 @@ EDITORS_OUT := $(BUILD_DIR)/editors
 # Editors built from a single source file, editors/<TYPE>.cpp,
 # using the shared editors/makefile.
 SINGLE_FILE_EDITORS := \
-	APPF APPV BOOL BYTE CHAR CSTR CURS DBLE FLOT ICON LLNG LONG MICN MIME \
-	MIMS MSGG OFFT PATN RECT RGBC SHRT SIZT SSZT TEXT TIME UBYT ULLG ULNG \
-	USHT bits nois unknown
+	ALGN AMTX APPF APPV BOOL BPNT BYTE CHAR CSTR CURS DBLE FLOT ICON LLNG \
+	LONG MICN MIME MIMS MSGG OFFT PATN RECT RGBC SHRT SIZE SIZT SSZT TEXT \
+	TIME UBYT ULLG ULNG USHT bits nois unknown
 
 # Editors that have a directory and makefile of their own: editors/<TYPE>/
 MULTI_FILE_EDITORS := MOOV WIND
