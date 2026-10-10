@@ -71,8 +71,10 @@ void decodeformat(unsigned char *buffer,media_raw_audio_format *format,size_t si
 		worker = worker + 4;
 		decode4(worker,&(format->byte_order));
 		worker = worker + 4;
-		decode4(worker,&(format->buffer_size));
+		uint32 buffersize = 0;
+		decode4(worker,&buffersize);
 		worker = worker + 4;
+		format->buffer_size = buffersize;
 	} else {
 		format->format = media_raw_audio_format::B_AUDIO_SHORT;
 		format->byte_order = B_MEDIA_BIG_ENDIAN;

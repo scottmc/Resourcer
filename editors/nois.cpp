@@ -2,6 +2,7 @@
 #include <image.h>
 #include <interface/Window.h>
 #include <stdio.h>
+#include <string.h>
 #include <interface/PictureButton.h>
 #include <interface/Button.h>
 #include <interface/Polygon.h>
@@ -83,8 +84,12 @@ void decodeformat(unsigned char *buffer,media_raw_audio_format *format,size_t si
 		worker = worker + 4;
 		decode4(worker,&(format->byte_order));
 		worker = worker + 4;
-		decode4(worker,&(format->buffer_size));
+		//	buffer_size is a size_t, 64 bits wide on 64 bit Haiku, while the
+		//	old layout stores 32 bits, so it can not be decoded into directly
+		uint32 buffersize = 0;
+		decode4(worker,&buffersize);
 		worker = worker + 4;
+		format->buffer_size = buffersize;
 	} else {
 		format->format = media_raw_audio_format::B_AUDIO_SHORT;
 		format->byte_order = B_MEDIA_BIG_ENDIAN;
@@ -174,29 +179,44 @@ void changesound(BView *box,BMessage *message) {
 
 int32 playsound(void *box) {
 	BNBox *boxa = (BNBox *)(box);
+	if (boxa->data == NULL || boxa->length <= sizeof(TranslatorSound))
+		return 0;
 	media_raw_audio_format format;
+	memset(&format,0,sizeof(format));
 	bool is_old;
 	decodeformat(boxa->data,&format,boxa->length,&is_old);
-	if (boxa->length == 0) {
+	size_t offset = is_old ? 20 : sizeof(TranslatorSound);
+	if (boxa->length <= offset)
 		return 0;
-		}
-	BSound *sound;
-	if (is_old) {
-		unsigned char *worker = boxa->data + 20;
-		sound = new BSound(worker,boxa->length - 20,format);
-	} else {
-		unsigned char *worker = boxa->data + sizeof(TranslatorSound);
-		sound = new BSound(worker,boxa->length - sizeof(TranslatorSound),format);
+	//	Play a private copy: the editor may replace boxa->data meanwhile.
+	size_t size = boxa->length - offset;
+	unsigned char *samples = new unsigned char[size];
+	memcpy(samples,boxa->data + offset,size);
+	if (format.format == media_raw_audio_format::B_AUDIO_SHORT
+		&& format.byte_order != B_MEDIA_HOST_ENDIAN) {
+		swap_data(uint32(B_INT16_TYPE),samples,size & ~size_t(1),B_SWAP_ALWAYS);
+		format.byte_order = B_MEDIA_HOST_ENDIAN;
 	}
+	format.buffer_size = size;
+	BSound *sound = new BSound(samples,size,format,true);
 	if (sound->InitCheck() == B_OK) {
-		BSoundPlayer *soundp = new BSoundPlayer;
-		soundp->Start();
-		int32 id = soundp->StartPlaying(sound);
-		boxa->id = id;
-		soundp->WaitForSound(id);
-		soundp->Stop();
+		//	The player takes the format of the sound (its default format would
+		//	not match); the buffer size is left to the player.
+		media_raw_audio_format playformat = format;
+		playformat.buffer_size = 0;
+		BSoundPlayer *soundp = new BSoundPlayer(&playformat,"Resourcer sound");
+		if (soundp->InitCheck() == B_OK) {
+			soundp->Start();
+			int32 id = soundp->StartPlaying(sound);
+			if (id >= 0) {
+				boxa->id = id;
+				soundp->WaitForSound(id);
+			}
+			soundp->Stop();
+		}
 		delete soundp;
 	}
+	sound->ReleaseRef();
 	return 0;
 }
 
