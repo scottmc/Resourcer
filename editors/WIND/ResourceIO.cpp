@@ -5,6 +5,7 @@
 
 // Standard Includes -----------------------------------------------------------
 #include <stdio.h>
+#include <string.h>
 
 // System Includes -------------------------------------------------------------
 #include <storage/Resources.h>
@@ -97,7 +98,35 @@ ssize_t ResourceIO::Write(const void *buffer,size_t numBytes) {
 }
 //------------------------------------------------------------------------------
 ssize_t ResourceIO::WriteAt(off_t position,const void *buffer,size_t numBytes) {
-	res->WriteResource(type,id,buffer,position,numBytes);
+	if (position < 0)
+		return B_BAD_VALUE;
+	//BResources::WriteResource() is deprecated, so build the new contents from the
+	//old ones and store the whole resource again, keeping its name.
+	size_t oldLength = 0;
+	const void *old = res->LoadResource(type,id,&oldLength);
+	if (old == NULL)
+		oldLength = 0;
+	size_t newLength = (size_t)position + numBytes;
+	if (newLength < oldLength)
+		newLength = oldLength;
+	unsigned char *data = new unsigned char[newLength];
+	memset(data,0,newLength);			//Anything between the old end and position stays zero
+	if (old != NULL)
+		memcpy(data,old,oldLength);
+	memcpy(data + position,buffer,numBytes);
+	char *oldName = NULL;
+	const char *resName;
+	size_t useless;
+	if (res->GetResourceInfo(type,id,&resName,&useless) && (resName != NULL)) {
+		oldName = new char[strlen(resName) + 1];
+		strcpy(oldName,resName);
+	}
+	res->RemoveResource(type,id);
+	status_t status = res->AddResource(type,id,data,newLength,oldName);
+	delete [] oldName;
+	delete [] data;
+	if (status != B_OK)
+		return status;
 	return numBytes;
 }
 //------------------------------------------------------------------------------
@@ -127,22 +156,20 @@ int32 ResourceIO::ID(void) {
 
 //----------------FOR COMPATIBILITY ONLY----------------------------------------
 status_t get_app_resource(type_code type,long id,void** buffer/*<-- do not initialize*/,size_t *lengthFound) {
-	char *fiddle;
-	if (be_app->AppResources()->GetResourceInfo(type,id,(const char**)&fiddle,lengthFound) == false)
+	const void *data = be_app->AppResources()->LoadResource(type,id,lengthFound);
+	if (data == NULL)
 		return B_ERROR;
 	*buffer = new unsigned char[*lengthFound];
-	if (be_app->AppResources()->ReadResource(type,id,*buffer,0,*lengthFound) != B_OK)
-		return B_ERROR;
+	memcpy(*buffer,data,*lengthFound);
 	return B_OK;
 }
 //------------------------------------------------------------------------------
 status_t get_app_resource(type_code type,const char *name,void** buffer/*<-- do not initialize*/,size_t *lengthFound) {
-	int32 id;
-	if (be_app->AppResources()->GetResourceInfo(type,name,&id,lengthFound) == false)
+	const void *data = be_app->AppResources()->LoadResource(type,name,lengthFound);
+	if (data == NULL)
 		return B_ERROR;
 	*buffer = new unsigned char[*lengthFound];
-	if (be_app->AppResources()->ReadResource(type,id,*buffer,0,*lengthFound) != B_OK)
-		return B_ERROR;
+	memcpy(*buffer,data,*lengthFound);
 	return B_OK;
 }
 //------------------------------------------------------------------------------
