@@ -10,6 +10,7 @@
 #include <interface/TextView.h>
 #include <interface/ScrollView.h>
 #include <interface/Button.h>
+#include <interface/Font.h>
 #include <interface/StatusBar.h>
 #include <interface/StringView.h>
 #include <interface/TextControl.h>
@@ -50,6 +51,7 @@ class ContainerView : public BView {
 	public:
 		ContainerView(unsigned char *data, size_t length);
 		void GoToPage(int32 page,bool refresh = true);
+		void UseFixedFont(void);
 		size_t CopyTo(void **into);
 		HEXView *HEX;
 		ASCIIView *ASCII;
@@ -59,9 +61,37 @@ class ContainerView : public BView {
 		int32 curPage;
 };
 
-class HEXView : public BTextView {
+//	A text view that can be told to wrap after a fixed number of characters, so
+//	that with a fixed-width font each line holds one row of 16 bytes: 32 hex
+//	characters or 16 text characters. Zero columns means wrap at the view's width.
+class FixedWrapView : public BTextView {
 	public:
-		HEXView(const char *name,uint32 flags) : BTextView(name,flags) {prcsed =false;wasdown = false;}
+		FixedWrapView(const char *name,uint32 flags) : BTextView(name,flags) {cols = 0;}
+		void SetColumns(int columns) {
+			cols = columns;
+			FixWrap();
+		}
+		void FrameResized(float width,float height) {
+			BTextView::FrameResized(width,height);
+			FixWrap();
+		}
+	private:
+		void FixWrap(void) {
+			if (cols <= 0)
+				return;
+			BFont font;
+			GetFont(&font);
+			float cw = font.StringWidth("M");
+			BRect rect = TextRect();
+			rect.right = rect.left + cols * cw + cw / 2;
+			SetTextRect(rect);
+		}
+		int cols;
+};
+
+class HEXView : public FixedWrapView {
+	public:
+		HEXView(const char *name,uint32 flags) : FixedWrapView(name,flags) {prcsed =false;wasdown = false;}
 		void InsertText(const char *text, int32 length, int32 offset, const text_run_array *runs);
 		void DeleteText(int32 start,int32 finish);
 		bool prcsed;
@@ -69,9 +99,9 @@ class HEXView : public BTextView {
 		int32 tempos;
 };
 
-class ASCIIView : public BTextView {
+class ASCIIView : public FixedWrapView {
 	public:
-		ASCIIView(const char *name,uint32 flags) : BTextView(name,flags) {prcsed =false;}
+		ASCIIView(const char *name,uint32 flags) : FixedWrapView(name,flags) {prcsed =false;}
 		void InsertText(const char *text, int32 length, int32 offset, const text_run_array *runs) {
 			for (int i = 0;i <length;i++) {
 				if ((text[i] == 0) || (text[i] == '\n'))
@@ -270,14 +300,10 @@ ContainerView::ContainerView(unsigned char *data, size_t length) : BView("hex",B
 		controls->AddView(new BStringView("total_blocks",string));
 		controls->AddItem(BSpaceLayoutItem::CreateGlue());
 		controls->AddView(new BButton("next","Next",new BMessage(-300)));
-		//	A page is 256 bytes: 16 per line, so 32 hex characters per line
-		font_height height;
-		be_plain_font->GetHeight(&height);
-		float line = height.ascent + height.descent + height.leading;
-		hexscroll->SetExplicitPreferredSize(BSize(be_plain_font->StringWidth("0") * 32 + 30,line * 16));
-		asciiscroll->SetExplicitPreferredSize(BSize(be_plain_font->StringWidth("M") * 16 + 30,line * 16));
 		views->AddView(hexscroll,2);
 		views->AddView(asciiscroll,1);
+		//	A page is 256 bytes: 16 per line, so 32 hex characters per line
+		UseFixedFont();
 		//	The container is complete, so the two views can fill themselves in
 		if (length < PAGE) {
 			ASCII->SetText((char *)(data),length);
@@ -289,6 +315,31 @@ ContainerView::ContainerView(unsigned char *data, size_t length) : BView("hex",B
 		HEX->SetMaxBytes(PAGE * 2);
 	}
 	
+//	Both views use the fixed font, wrapping after one row of 16 bytes (32 hex
+//	characters, 16 text characters) so the two line up row for row. That row is
+//	also the narrowest the views can be without cutting the rows off.
+void ContainerView::UseFixedFont(void) {
+	HEX->SetFontAndColor(be_fixed_font);
+	ASCII->SetFontAndColor(be_fixed_font);
+	HEX->SetColumns(32);
+	ASCII->SetColumns(16);
+	font_height height;
+	be_fixed_font->GetHeight(&height);
+	float line = height.ascent + height.descent + height.leading;
+	float cw = be_fixed_font->StringWidth("M");
+	BView *hexscroll = FindView("HEXScroll");
+	BView *asciiscroll = FindView("ASCIIScroll");
+	if (hexscroll != NULL) {
+		hexscroll->SetExplicitMinSize(BSize(cw * 32.5 + 30,B_SIZE_UNSET));
+		hexscroll->SetExplicitPreferredSize(BSize(cw * 32.5 + 30,line * 16));
+	}
+	if (asciiscroll != NULL) {
+		asciiscroll->SetExplicitMinSize(BSize(cw * 16.5 + 30,B_SIZE_UNSET));
+		asciiscroll->SetExplicitPreferredSize(BSize(cw * 16.5 + 30,line * 16));
+	}
+	InvalidateLayout();
+}
+
 void ContainerView::GoToPage(int32 page,bool refresh) {
 	if (page * PAGE > size) {
 		beep();
@@ -306,6 +357,9 @@ void ContainerView::GoToPage(int32 page,bool refresh) {
 	else
 		ASCII->SetText(((char *)(res) + (page * PAGE)),PAGE);
 	curPage = page;
+	//	New text may not carry the fixed font
+	HEX->SetFontAndColor(be_fixed_font);
+	ASCII->SetFontAndColor(be_fixed_font);
 }
 
 size_t ContainerView::CopyTo(void **into) {
