@@ -1,5 +1,8 @@
 //------------Includes----------------------
 #include <image.h>
+#include <interface/GroupLayout.h>
+#include <interface/Size.h>
+#include <interface/SpaceLayoutItem.h>
 #include <interface/Window.h>
 #include <stdio.h>
 #include <interface/RadioButton.h>
@@ -67,7 +70,7 @@ class pixel : public BView {
 
 class cursor : public BView {
 	public:
-	cursor(unsigned char *data, char x, char y) : BView(BRect(4,22,260,278),"cursor",B_FOLLOW_LEFT | B_FOLLOW_TOP,B_WILL_DRAW | B_FRAME_EVENTS | B_FULL_UPDATE_ON_RESIZE) {
+	cursor(unsigned char *data, char x, char y) : BView(BRect(0,0,256,256),"cursor",B_FOLLOW_NONE,B_WILL_DRAW | B_FRAME_EVENTS | B_FULL_UPDATE_ON_RESIZE) {
 		int row = 0;
 		X = new BPicture;
 		int byte = 0;
@@ -197,7 +200,6 @@ extern "C" _EXPORT void messaging(BMessage *,BView *);
 extern "C" _EXPORT const char description[] = "Cursor";
 
 void loaddata(unsigned char *data,size_t length,BView *bkgview) {//runs when add-on starts, window is initialized, you are expected to write to it: rect is 300 x 300
-	bkgview->Window()->ResizeBy(65,0);
 	if (length == 0) {
 		unsigned char *bla = new unsigned char[70];
 		for (int i = 0;i < 32; i++) {
@@ -211,10 +213,6 @@ void loaddata(unsigned char *data,size_t length,BView *bkgview) {//runs when add
 		bkgview->AddChild(new cursor(data + 4,*(data + 3),*(data + 2)));
 	}
 	cursor *cur = ((cursor *)(bkgview->FindView("cursor")));
-	bkgview->AddChild(new BRadioButton(BRect(265,20,365,40), "Color", "Color Change", new BMessage(-200)));
-	((BRadioButton *)(bkgview->FindView("Color")))->SetValue(true);
-	bkgview->AddChild(new BRadioButton(BRect(265,40,365,60), "Hot", "Choose Hot Spot", new BMessage(-200)));
-	bkgview->AddChild(new BRadioButton(BRect(265,60,365,80), "Mask", "Define Mask", new BMessage(-200)));
 	BPicture *X = cur->X;
 	cur->BeginPicture(X);
 	cur->SetHighColor(127,127,127);
@@ -223,6 +221,37 @@ void loaddata(unsigned char *data,size_t length,BView *bkgview) {//runs when add
 	cur->StrokeLine(BPoint(0,16),BPoint(16,0));
 	cur->EndPicture();
 	cur->Invalidate();
+
+	//	The pixel grid keeps its size, the radio buttons beside it follow the font.
+	cur->RemoveSelf();
+	cur->SetExplicitMinSize(BSize(256,256));
+	cur->SetExplicitPreferredSize(BSize(256,256));
+	cur->SetExplicitMaxSize(BSize(256,256));
+	BRadioButton *color = new BRadioButton("Color","Color Change",new BMessage(-200));
+	BRadioButton *hot = new BRadioButton("Hot","Choose Hot Spot",new BMessage(-200));
+	BRadioButton *mask = new BRadioButton("Mask","Define Mask",new BMessage(-200));
+	color->SetValue(true);
+	BGroupLayout *top = new BGroupLayout(B_HORIZONTAL,10);
+	bkgview->SetLayout(top);
+	top->SetInsets(4,4,4,4);
+	BGroupLayout *modes = new BGroupLayout(B_VERTICAL,5);
+	top->AddView(cur);
+	top->AddItem(modes);
+	top->ItemAt(0)->SetExplicitAlignment(BAlignment(B_ALIGN_LEFT,B_ALIGN_TOP));
+	modes->AddView(color);
+	modes->AddView(hot);
+	modes->AddView(mask);
+	modes->AddItem(BSpaceLayoutItem::CreateGlue());
+
+	//	Ask for the minimum size first: the preferred size can come back as NaN
+	//	until the layout is validated, so the tests replace a NaN.
+	BSize min = bkgview->MinSize();
+	BSize size = bkgview->PreferredSize();
+	if (!(size.width >= min.width))
+		size.width = min.width;
+	if (!(size.height >= min.height))
+		size.height = min.height;
+	bkgview->Window()->ResizeTo(size.width,size.height);
 }
 
 unsigned char* savedata(size_t *length,BView *bkgview) { //return data, clean up, and set sizeto the size of data

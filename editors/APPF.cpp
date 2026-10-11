@@ -3,6 +3,9 @@
 #include <app/Roster.h>
 #include <interface/RadioButton.h>
 #include <interface/CheckBox.h> 
+#include <interface/GroupLayout.h>
+#include <interface/Size.h>
+#include <interface/SpaceLayoutItem.h>
 #include <interface/Window.h>
 #include <stdio.h>
 //------------------------------------------
@@ -34,34 +37,52 @@ void loaddata(unsigned char *data,size_t length,BView *bkgview) {//runs when add
 				value = 0;
 		}
 	}
-	bkgview->Window()->ResizeTo(300,100);
-	BRadioButton *buts[3];
-	buts[0] = new BRadioButton(BRect(20,20,130,40),"1","Single Launch",new BMessage(-100));
-	buts[1] = new BRadioButton(BRect(20,40,130,60),"2","Multiple Launch",new BMessage(-200));
-	buts[2] = new BRadioButton(BRect(20,60,130,80),"3","Exclusive Launch",new BMessage(-200));
-	bkgview->AddChild(buts[0]);
-	bkgview->AddChild(buts[1]);
-	bkgview->AddChild(buts[2]);
-	bkgview->Window()->Lock();
-	buts[value]->SetValue(true);
-	bkgview->Window()->Unlock();
-	BCheckBox *boxes[2];
-	boxes[0] = new BCheckBox(BRect(170,20,280,40),"4","Background App",new BMessage(-200));
-	boxes[1] = new BCheckBox(BRect(170,40,280,60),"5","ARGV Only",new BMessage(-200));
 	if (length != 0)
 		app_flags = *((uint32 *)(data));
+	//	The launch modes are radio buttons in one column and the flags are check
+	//	boxes in another; the layout sizes both to the font.
+	BRadioButton *buts[3];
+	buts[0] = new BRadioButton("1","Single Launch",new BMessage(-100));
+	buts[1] = new BRadioButton("2","Multiple Launch",new BMessage(-200));
+	buts[2] = new BRadioButton("3","Exclusive Launch",new BMessage(-200));
+	buts[value]->SetValue(true);
+	BCheckBox *boxes[2];
+	boxes[0] = new BCheckBox("4","Background App",new BMessage(-200));
+	boxes[1] = new BCheckBox("5","ARGV Only",new BMessage(-200));
 	if (app_flags & B_BACKGROUND_APP)
 		boxes[0]->SetValue(true);
 	if (app_flags & B_ARGV_ONLY)
 		boxes[1]->SetValue(true);
-	bkgview->AddChild(boxes[0]);
-	bkgview->AddChild(boxes[1]);
+
+	BGroupLayout *top = new BGroupLayout(B_HORIZONTAL,20);
+	bkgview->SetLayout(top);
+	top->SetInsets(10,10,10,10);
+	BGroupLayout *modes = new BGroupLayout(B_VERTICAL,5);
+	BGroupLayout *flags = new BGroupLayout(B_VERTICAL,5);
+	top->AddItem(modes);
+	top->AddItem(flags);
+	for (int i = 0; i < 3; i++)
+		modes->AddView(buts[i]);
+	flags->AddView(boxes[0]);
+	flags->AddView(boxes[1]);
+	flags->AddItem(BSpaceLayoutItem::CreateGlue());
+
+	//	Ask for the minimum size first: the preferred size can come back as NaN
+	//	until the layout is validated, so the tests replace a NaN.
+	BSize min = bkgview->MinSize();
+	BSize size = bkgview->PreferredSize();
+	if (!(size.width >= min.width))
+		size.width = min.width;
+	if (!(size.height >= min.height))
+		size.height = min.height;
+	bkgview->Window()->ResizeTo(size.width,size.height);
 }
 
 unsigned char* savedata(size_t *length,BView *bkgview) { //return data, clean up, and set sizeto the size of data
 	uint32 one = 0;
 	for(int i = 0; i <= 2; i++) {
-		BRadioButton *but = (BRadioButton *)(bkgview->ChildAt(i));
+		char name[2] = {char('1' + i),0};
+		BRadioButton *but = (BRadioButton *)(bkgview->FindView(name));
 		if (but->Value() == true) {
 			one = i;
 			break;
@@ -83,8 +104,8 @@ unsigned char* savedata(size_t *length,BView *bkgview) { //return data, clean up
 	}
 	one = value;
 	BCheckBox *boxes[2];
-	boxes[0] = (BCheckBox *)(bkgview->ChildAt(3));
-	boxes[1] = (BCheckBox *)(bkgview->ChildAt(4));
+	boxes[0] = (BCheckBox *)(bkgview->FindView("4"));
+	boxes[1] = (BCheckBox *)(bkgview->FindView("5"));
 	uint32 a = boxes[0]->Value();
 	if (a) {
 		a = B_BACKGROUND_APP;

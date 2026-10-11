@@ -4,6 +4,8 @@
 #include <stdio.h>
 #include <interface/CheckBox.h>
 #include <interface/ColorControl.h>
+#include <interface/GroupLayout.h>
+#include <interface/Size.h>
 #include <Screen.h>
 //-------------------------------------------
 
@@ -32,7 +34,7 @@ class pixel : public BView {
 
 class icon : public BView {
 	public:
-	icon(unsigned char *data) : BView(BRect(4,4,260,260),"icon",B_FOLLOW_LEFT | B_FOLLOW_TOP,B_WILL_DRAW | B_FRAME_EVENTS | B_FULL_UPDATE_ON_RESIZE) {
+	icon(unsigned char *data) : BView(BRect(0,0,256,256),"icon",B_FOLLOW_NONE,B_WILL_DRAW | B_FRAME_EVENTS | B_FULL_UPDATE_ON_RESIZE) {
 		int row = 0;
 		pixel *pix;
 		for (int i = 0;!((i == 32) && (row == 31)); i++) {
@@ -44,6 +46,11 @@ class icon : public BView {
 			AddChild(pix);
 			pix->Invalidate();
 		}
+		//	The grid is a fixed 257 pixel square: the pixels are drawn in
+		//	device pixels, so the layout must not stretch or shrink it.
+		SetExplicitMinSize(BSize(256,256));
+		SetExplicitPreferredSize(BSize(256,256));
+		SetExplicitMaxSize(BSize(256,256));
 	}
 };
 
@@ -92,7 +99,6 @@ void loaddata(unsigned char *data,size_t length,BView *bkgview) {//runs when add
 	//BBitmap *bits = new BBitmap(BRect(0,0,31,31),B_CMAP8,false,true);
 	//memcpy(bits->Bits(),data + sizeof(TranslatorBitmap),length);
 	//BIView *v = new BIView(bits);
-	bkgview->Window()->ResizeTo(270,360);
 	if (length == 0) {
 		data = new unsigned char[32*32];
 		for (int i = 0; i < (32 *32); i++) {
@@ -100,9 +106,28 @@ void loaddata(unsigned char *data,size_t length,BView *bkgview) {//runs when add
 		}
 	}
 	icon *v = new icon(data);
-	bkgview->AddChild(v);
-	bkgview->AddChild(new BCheckBox(BRect(4,340,150,360),"Tp","Transparent",new BMessage(-100)));
-	bkgview->AddChild(new BColorControl(BPoint(4,270),B_CELLS_32x8,8,"iconcolors"));
+	BCheckBox *transparent = new BCheckBox("Tp","Transparent",new BMessage(-100));
+	BColorControl *colors = new BColorControl(BPoint(0,0),B_CELLS_32x8,8,"iconcolors");
+	//	The grid keeps its pixel size; the check box and the colour control follow
+	//	the font.
+	BGroupLayout *top = new BGroupLayout(B_VERTICAL,5);
+	bkgview->SetLayout(top);
+	top->SetInsets(4,4,4,4);
+	top->AddView(v);
+	top->AddView(transparent);
+	top->AddView(colors);
+	top->ItemAt(0)->SetExplicitAlignment(BAlignment(B_ALIGN_LEFT,B_ALIGN_TOP));
+	top->ItemAt(1)->SetExplicitAlignment(BAlignment(B_ALIGN_LEFT,B_ALIGN_TOP));
+
+	//	Ask for the minimum size first: the preferred size can come back as NaN
+	//	until the layout is validated, so the tests replace a NaN.
+	BSize min = bkgview->MinSize();
+	BSize size = bkgview->PreferredSize();
+	if (!(size.width >= min.width))
+		size.width = min.width;
+	if (!(size.height >= min.height))
+		size.height = min.height;
+	bkgview->Window()->ResizeTo(size.width,size.height);
 }
 
 unsigned char* savedata(size_t *length,BView *bkgview) { //return data, clean up, and set sizeto the size of data
