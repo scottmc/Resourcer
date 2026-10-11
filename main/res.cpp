@@ -20,6 +20,8 @@ TypeItem::TypeItem(type_code code) : BStringItem("type") {
 	BPath path;
 	entry.GetPath(&path);
 	path.Append(TypeCode());
+	//	entry still names the editors directory, so look at the editor itself
+	entry.SetTo(path.Path());
 	if (entry.Exists() == false) {
 		description = "Unknown";
 	} else {
@@ -404,7 +406,7 @@ bool restypeview::InitiateDrag(BPoint point,int32 index, bool selected) {
 
 void restypeview::MessageReceived(BMessage *msg) {
 	if (msg->WasDropped())
-		StrokeRect(Bounds(),B_SOLID_LOW);
+		Invalidate();		//---removes the drop highlight; see MouseMoved
 	BOutlineListView::MessageReceived(msg);
 	reswindow *x = (reswindow *)(Window());
 	char *name;
@@ -414,6 +416,8 @@ void restypeview::MessageReceived(BMessage *msg) {
 	ssize_t size;
 	int32 id = 0;
 	BMessage *message = msg;
+	BMessage replied;			//---reply to a drag, owned here instead of leaked
+	BMessage clipped;			//---a message archived inside a clipping
 	BOutlineListView *old;
 	unsigned char *data;
 	if (msg->WasDropped() == false) {
@@ -498,6 +502,8 @@ void restypeview::MessageReceived(BMessage *msg) {
 				BMessage *msg1 = new BMessage('REQ1');
 				msg1->AddData("data",type,data,size);
 				msg->SendReply(msg1);
+				delete msg1;
+				delete [] (unsigned char *)data;
 				}
 				break;
 			case B_MIME_DATA:
@@ -510,14 +516,13 @@ void restypeview::MessageReceived(BMessage *msg) {
 		message->FindPointer("this",(void **)(&old));
 		if (old == this)
 			return;
-		BMessage *reply = new BMessage;
-		message->SendReply('REQU',reply);
+		message->SendReply('REQU',&replied);
 		message->FindString("name",(const char **)(&name));
 		if (message->HasInt32("id"))
 			message->FindInt32("id",&id);
 		else
 			id = 0;
-		message = reply;
+		message = &replied;
 		message->GetInfo("data",&type);
 		message->FindData("data",type,(const void **)&dat,&size);
 		data = new unsigned char[size];
@@ -530,9 +535,9 @@ void restypeview::MessageReceived(BMessage *msg) {
 			char adname[B_MIME_TYPE_LENGTH];
 			entry_ref ref;
 			if (msg->FindRef("refs",&ref) != B_OK) {
-				BMessage *reply = new BMessage(B_COPY_TARGET);
-				reply->AddString("be:types","image/x-bmp");
-				msg->SendReply(reply,this);
+				BMessage reply(B_COPY_TARGET);
+				reply.AddString("be:types","image/x-bmp");
+				msg->SendReply(&reply,this);
 				return;
 			}
 			name = ownedname = new char[B_FILE_NAME_LENGTH];
@@ -545,16 +550,19 @@ void restypeview::MessageReceived(BMessage *msg) {
 				MakeEmpty();
 				if (((reswindow *)(Window()))->openres->MergeFrom(&file) != B_OK) {
 					beep();
+					Window()->Unlock();
+					delete [] ownedname;
 					return;
 				}
 				FillRect(Bounds(),B_SOLID_LOW);
 				Window()->Unlock();
 				Init(((reswindow *)(Window()))->openres);
 				((reswindow *)(Window()))->changes = true;
+				delete [] ownedname;
 				return;
 			} else {
 				{
-					BMessage *q = new BMessage;
+					BMessage *q = &clipped;
 					char *temp;
 					type_code fool;
 					if (message->GetInfo('MSGG',0,&temp,&fool) == B_OK) {

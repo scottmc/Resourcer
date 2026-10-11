@@ -305,13 +305,11 @@ void TypeItem::SetDescription(void) {
 		dir.SetTo(&entry);
 	//----------Load Editor-----------------------------
 		BPath path(&dir,TypeAsString());
-		image_id plugin;
 		entry.SetTo(path.Path());
 		if (entry.Exists() == false) {
 			description = "Unknown";
 			return;
 		}
-		plugin = load_add_on(path.Path());
 		image_id editor = load_add_on(path.Path());
 		char *temp;
 		if (get_image_symbol(editor,"description",B_SYMBOL_TYPE_DATA,(void **)(&temp)) != B_NO_ERROR)
@@ -321,9 +319,12 @@ void TypeItem::SetDescription(void) {
 			strcpy(copy,temp);
 			description = copy;
 		}
+		if (editor >= 0)
+			unload_add_on(editor);
 		char *tempy = new char[10 + strlen(description)];
 		sprintf(tempy,"%s (%s)",TypeAsString(),description);
 		SetText(tempy);
+		delete [] tempy;
 }
 
 void TypeItem::SetTypeCode(const char *string_code) {
