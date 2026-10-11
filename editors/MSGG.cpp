@@ -54,6 +54,7 @@ class TypeItem : public BStringItem {
 		void SetDescription(void);
 		const char *description;
 		type_code type;
+		char asstring[5];		//---what TypeAsString() returns, owned by the item
 };
 
 class PlugWin : public BWindow {
@@ -333,12 +334,14 @@ void TypeItem::SetTypeCode(const char *string_code) {
 	SetDescription();
 }
 
+//	The string lives in the item, so there is nothing for the caller to free. It
+//	stays valid as long as the item does, which for a temporary item is the
+//	full expression it is used in.
 char *TypeItem::TypeAsString(void) {
-	char *AsString = new char[5];
-	memcpy(AsString,&type,4);
-	swap_data(B_UINT32_TYPE,AsString,4,B_SWAP_BENDIAN_TO_HOST);
-	AsString[4] = 0;
-	return AsString;
+	memcpy(asstring,&type,4);
+	swap_data(B_UINT32_TYPE,asstring,4,B_SWAP_BENDIAN_TO_HOST);
+	asstring[4] = 0;
+	return asstring;
 }
 
 type_code TypeItem::Type(void) {
@@ -367,8 +370,8 @@ bool PlugWin::QuitRequested(void) {
 	size_t length;
 	unsigned char *data = (*savedata)(&length,gray);
 	msg.ReplaceData(name,type,index,data,length);
-	delete data;
-	delete name;
+	delete [] data;
+	delete [] name;
 	openWindows.RemoveItem(this);
 	return true;
 }
