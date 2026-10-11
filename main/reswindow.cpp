@@ -293,7 +293,9 @@ reswindow::reswindow(const char *title,entry_ref ref) : BWindow(gettiledrect(),t
 	layout->AddView(menus);
 	BMenu *file = new BMenu("File");
 	menus->AddItem(file);
-	file->AddItem(new BMenuItem("About Resourcer...",new BMessage(B_ABOUT_REQUESTED)));
+	BMenuItem *about = new BMenuItem("About Resourcer...",new BMessage(B_ABOUT_REQUESTED));
+	about->SetTarget(be_app);
+	file->AddItem(about);
 	file->AddItem(new BSeparatorItem);
 	file->AddItem(new BMenuItem("New",new BMessage('newf'),'N'));
 	file->AddItem(new BMenuItem("Open...",new BMessage('open'),'O'));
@@ -483,14 +485,6 @@ void reswindow::MessageReceived(BMessage *message) {
 	thread_id thread;
 	BMessage *msg;
 	switch (message->what) {
-		case B_ABOUT_REQUESTED:
-			#if __POWERPC__
-				(new BAlert("About...","Resourcer 3.0 for PowerPC\n" B_UTF8_COPYRIGHT "1999-2000 Nathan Whitehorn","OK"))->Go();
-			#endif
-			#if !__POWERPC__
-				(new BAlert("About...","Resourcer 3.0 for Intel\n" B_UTF8_COPYRIGHT "1999-2000 Nathan Whitehorn","OK"))->Go();
-			#endif
-			break;
 		case 'newf':
 			((BRApplication *)(be_app))->saveas = false;
 			alredopen = false;

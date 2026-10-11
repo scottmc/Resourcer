@@ -3,6 +3,8 @@
 
 #include <FindDirectory.h>
 #include <Path.h>
+#define RESOURCER_SIGNATURE "application/x-vnd.NW-resourcer"
+
 extern bool launched;
 extern bool alredopen;
 extern bool panelopen;
@@ -15,6 +17,7 @@ class BRApplication : public BApplication {
 		void getready(BMessage *message,bool istempfile = false);
 		void dissectwindow(BMessage *msg);
 		void MessageReceived(BMessage *message);
+		void AboutRequested(void);
 		void ReadyToRun(void);
 		bool savepan;
 		char *retrieve;

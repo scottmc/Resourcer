@@ -1,13 +1,17 @@
 // The BRApplication class: startup, file panels and save handling.
 // Declaration is in class.h.
 
+#include <AboutWindow.h>
+#include <time.h>
+#include <storage/AppFileInfo.h>
+#include <storage/File.h>
 #include "includes.h"
 #include "preamble.h"
 #include "class.h"
 #include "res.h"
 #include "reswindow.h"
 
-BRApplication::BRApplication(void) : BApplication("application/x-vnd.NW-resourcer") {
+BRApplication::BRApplication(void) : BApplication(RESOURCER_SIGNATURE) {
 	openpan = false;
 	retrieve = new char[2];
 	retrieve[0] = 0;
@@ -38,6 +42,57 @@ BRApplication::MessageReceived(BMessage *message) {
 		default:
 			BApplication::MessageReceived(message);
 		}
+}
+
+//	The About window takes its icon and version from this running copy of
+//	Resourcer: the HVIF icon and the app version (APPV) resource in its file.
+void
+BRApplication::AboutRequested(void) {
+	BAboutWindow *about = new BAboutWindow("Resourcer",RESOURCER_SIGNATURE);
+	app_info info;
+	if (GetAppInfo(&info) == B_OK) {
+		BFile file(&info.ref,B_READ_ONLY);
+		BAppFileInfo appinfo(&file);
+		if (appinfo.InitCheck() == B_OK) {
+			version_info version;
+			if (appinfo.GetVersionInfo(&version,B_APP_VERSION_KIND) == B_OK) {
+				BString text("Version ");
+				text << (int)(version.major) << "." << (int)(version.middle);
+				if (version.minor > 0)
+					text << "." << (int)(version.minor);
+				static const char *varieties[] = {"development","alpha","beta","gamma","gold master"};
+				if (version.variety <= B_GOLDEN_MASTER_VERSION)
+					text << "-" << varieties[version.variety];
+				about->SetVersion(text.String());
+			}
+			BBitmap *icon = new BBitmap(BRect(0,0,63,63),B_RGBA32);
+			if (appinfo.GetIcon(icon,(icon_size)64) == B_OK)
+				about->SetIcon(icon);
+			else
+				delete icon;
+		}
+	}
+	about->AddDescription("A resource editor for Haiku.");
+	//	AddCopyright() puts its own holder first and runs its years up to the
+	//	current one, so the two lines are written out to keep the original
+	//	author first and his years as they were.
+	time_t now = time(NULL);
+	char year[8];
+	strftime(year,sizeof(year),"%Y",localtime(&now));
+	BString current(B_UTF8_COPYRIGHT " 2012-");
+	current << year << " HaikuArchives Team";
+	const char *copyrights[] = {
+		B_UTF8_COPYRIGHT " 1999-2000 Nathan Whitehorn",
+		current.String(),
+		"All Rights Reserved.",
+		NULL};
+	about->AddText(NULL,copyrights);
+	static const char *credits[] = {
+		"The RDEF export uses Haiku's rc decompiler,",
+		B_UTF8_COPYRIGHT " 2003 Matthijs Hollemans (MIT license).",
+		NULL};
+	about->AddText("Includes code from:",credits);
+	about->Show();
 }
 
 void
