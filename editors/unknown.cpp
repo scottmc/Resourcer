@@ -2,6 +2,11 @@
 #include <image.h>
 #include <interface/Alert.h>
 #include <stdio.h>
+#include <string.h>
+#include <interface/GroupLayout.h>
+#include <interface/Size.h>
+#include <interface/SpaceLayoutItem.h>
+#include <interface/Window.h>
 #include <interface/TextView.h>
 #include <interface/ScrollView.h>
 #include <interface/Button.h>
@@ -35,6 +40,11 @@ class AddressView;
 extern "C" _EXPORT void loaddata(unsigned char *,size_t,BView *);
 extern "C" _EXPORT unsigned char* savedata(size_t *,BView *);
 extern "C" _EXPORT void messaging(BMessage *,BView *);
+//	Tells Resourcer that this editor wants a resizable window
+extern "C" _EXPORT const bool resizable = true;
+
+class ContainerView;
+ContainerView *ownerof(BView *view);
 
 class ContainerView : public BView {
 	public:
@@ -51,7 +61,7 @@ class ContainerView : public BView {
 
 class HEXView : public BTextView {
 	public:
-		HEXView(BRect frame, const char *name, BRect textRect,uint32 resizingMode,uint32 flags) : BTextView(frame,name,textRect,resizingMode,flags) {prcsed =false;wasdown = false;}
+		HEXView(const char *name,uint32 flags) : BTextView(name,flags) {prcsed =false;wasdown = false;}
 		void InsertText(const char *text, int32 length, int32 offset, const text_run_array *runs);
 		void DeleteText(int32 start,int32 finish);
 		bool prcsed;
@@ -61,7 +71,7 @@ class HEXView : public BTextView {
 
 class ASCIIView : public BTextView {
 	public:
-		ASCIIView(BRect frame, const char *name, BRect textRect,uint32 resizingMode,uint32 flags) : BTextView(frame,name,textRect,resizingMode,flags) {prcsed =false;}
+		ASCIIView(const char *name,uint32 flags) : BTextView(name,flags) {prcsed =false;}
 		void InsertText(const char *text, int32 length, int32 offset, const text_run_array *runs) {
 			for (int i = 0;i <length;i++) {
 				if ((text[i] == 0) || (text[i] == '\n'))
@@ -79,23 +89,23 @@ class ASCIIView : public BTextView {
 					hexed[(i*2)+1] = hex[1];
 				}
 				hexed[length*2] = 0;
-				((ContainerView *)(Parent()))->HEX->prcsed = true;
-				((ContainerView *)(Parent()))->HEX->Insert(offset*2,hexed,length*2,runs);
-				((ContainerView *)(Parent()))->HEX->prcsed = false;
+				ownerof(this)->HEX->prcsed = true;
+				ownerof(this)->HEX->Insert(offset*2,hexed,length*2,runs);
+				ownerof(this)->HEX->prcsed = false;
 				delete hexed;
 			} else {
-				((ContainerView *)(Parent()))->HEX->prcsed = true;
-				((ContainerView *)(Parent()))->HEX->Insert(offset*2,hexbyte(uint8(*text)),length*2,runs);
-				((ContainerView *)(Parent()))->HEX->prcsed = false;
+				ownerof(this)->HEX->prcsed = true;
+				ownerof(this)->HEX->Insert(offset*2,hexbyte(uint8(*text)),length*2,runs);
+				ownerof(this)->HEX->prcsed = false;
 			}
 			}
 		}
 		void DeleteText(int32 start,int32 finish) {
 			BTextView::DeleteText(start,finish);
 			if (prcsed == false) {
-			((ContainerView *)(Parent()))->HEX->prcsed = true;
-			((ContainerView *)(Parent()))->HEX->Delete(start*2,finish*2);
-			((ContainerView *)(Parent()))->HEX->prcsed = false;
+			ownerof(this)->HEX->prcsed = true;
+			ownerof(this)->HEX->Delete(start*2,finish*2);
+			ownerof(this)->HEX->prcsed = false;
 			}
 		}
 		bool prcsed;
@@ -105,12 +115,12 @@ class ASCIIView : public BTextView {
 
 /*inline void HEXView::Highlight(int32 start,int32 finish) {
 	if (prcsed == false) {
-		((ContainerView *)(Parent()))->ASCII->prcsed = true;
+		ownerof(this)->ASCII->prcsed = true;
 		int32 a,b;
-		//((ContainerView *)(Parent()))->ASCII->SelectAll();
-		((ContainerView *)(Parent()))->ASCII->Select(start/2,finish/2);
-		//((ContainerView *)(Parent()))->ASCII->Highlight(start/2,finish/2);
-		((ContainerView *)(Parent()))->ASCII->prcsed = false;
+		//ownerof(this)->ASCII->SelectAll();
+		ownerof(this)->ASCII->Select(start/2,finish/2);
+		//ownerof(this)->ASCII->Highlight(start/2,finish/2);
+		ownerof(this)->ASCII->prcsed = false;
 	} else {
 		BTextView::Highlight(start,finish);
 	}
@@ -176,13 +186,13 @@ void HEXView::InsertText(const char *text, int32 length, int32 offset, const tex
 			dehex(text,length,(unsigned char *)(x));
 		}*/
 		if (prcsed == false) {
-			if (((ContainerView *)(Parent()))->ASCII != NULL) {
-				((ContainerView *)(Parent()))->ASCII->prcsed = true;
+			if (ownerof(this)->ASCII != NULL) {
+				ownerof(this)->ASCII->prcsed = true;
 				char *dehexed = new char[strlen(Text()) + 1];
 				dehex(Text(),strlen(Text()),(unsigned char *)(dehexed));
 				seek0s(dehexed,strlen(Text())/2);
-				((ContainerView *)(Parent()))->ASCII->SetText(dehexed);
-				((ContainerView *)(Parent()))->ASCII->prcsed = false;
+				ownerof(this)->ASCII->SetText(dehexed);
+				ownerof(this)->ASCII->prcsed = false;
 			}
 		}
 	} else {
@@ -199,13 +209,13 @@ void HEXView::DeleteText(int32 start,int32 finish) {
 	//	finish++;
 	BTextView::DeleteText(start,finish);
 	if (prcsed == false) {
-			if (((ContainerView *)(Parent()))->ASCII != NULL) {
-				((ContainerView *)(Parent()))->ASCII->prcsed = true;
+			if (ownerof(this)->ASCII != NULL) {
+				ownerof(this)->ASCII->prcsed = true;
 				char *dehexed = new char[strlen(Text()) + 1];
 				dehex(Text(),strlen(Text()),(unsigned char *)(dehexed));
 				seek0s(dehexed,strlen(Text()) /2);
-				((ContainerView *)(Parent()))->ASCII->SetText(dehexed);
-				((ContainerView *)(Parent()))->ASCII->prcsed = false;
+				ownerof(this)->ASCII->SetText(dehexed);
+				ownerof(this)->ASCII->prcsed = false;
 			}
 		}
 }
@@ -220,23 +230,56 @@ void seek0s(char *seekin,size_t length) {
 
 class AddressView : public BTextControl {
   public:
-	AddressView(ContainerView *parent) : BTextControl(BRect(70,10,170,50),"address","Current Page: ","0",new BMessage(-200)) {
-		SetDivider(be_plain_font->StringWidth(Label()));
+	AddressView(ContainerView *parent) : BTextControl("address","Current Page: ","0",new BMessage(-200)) {
+		//	Room for the label and a few digits, no more
+		SetExplicitMaxSize(BSize(be_plain_font->StringWidth(Label()) + be_plain_font->StringWidth("00000") + 30,B_SIZE_UNSET));
 	}
 };
 
-ContainerView::ContainerView(unsigned char *data, size_t length) : BView(BRect(10,10,290,260),"hex",B_FOLLOW_ALL_SIDES,B_WILL_DRAW) {
+//	The text views sit inside scroll views, so the container is found by name.
+ContainerView *ownerof(BView *view) {
+	BView *parent = view->Parent();
+	while (parent != NULL && strcmp(parent->Name(),"hex") != 0)
+		parent = parent->Parent();
+	return (ContainerView *)(parent);
+}
+
+ContainerView::ContainerView(unsigned char *data, size_t length) : BView("hex",B_WILL_DRAW) {
 		SetViewColor(216,216,216);
-		HEX = new HEXView(BRect(0,50,180,250),"HEXView",BRect(5,5,165,195),B_FOLLOW_ALL_SIDES,B_FRAME_EVENTS | B_WILL_DRAW | B_PULSE_NEEDED | B_NAVIGABLE);
-		ASCII = new ASCIIView(BRect(190,50,280,250),"ASCIIView",BRect(0,5,75,195),B_FOLLOW_ALL_SIDES,B_FRAME_EVENTS | B_WILL_DRAW | B_PULSE_NEEDED | B_NAVIGABLE);
-		AddChild(HEX);
-		AddChild(ASCII);
+		HEX = new HEXView("HEXView",B_FRAME_EVENTS | B_WILL_DRAW | B_PULSE_NEEDED | B_NAVIGABLE);
+		ASCII = new ASCIIView("ASCIIView",B_FRAME_EVENTS | B_WILL_DRAW | B_PULSE_NEEDED | B_NAVIGABLE);
+		BScrollView *hexscroll = new BScrollView("HEXScroll",HEX,B_WILL_DRAW | B_FRAME_EVENTS,false,true,B_FANCY_BORDER);
+		BScrollView *asciiscroll = new BScrollView("ASCIIScroll",ASCII,B_WILL_DRAW | B_FRAME_EVENTS,false,true,B_FANCY_BORDER);
+		res = data;
+		size = length;
+		curPage = 0;
+		Address = new AddressView(this);
+		char string[20];
+		sprintf(string," / %lu",(unsigned long)(length/PAGE));
+		//	The page controls run along the top, the two views share the rest of
+		//	the room, the hex view getting twice the width of the text view as it
+		//	shows two characters per byte.
+		BGroupLayout *top = new BGroupLayout(B_VERTICAL,5);
+		SetLayout(top);
+		BGroupLayout *controls = new BGroupLayout(B_HORIZONTAL,8);
+		BGroupLayout *views = new BGroupLayout(B_HORIZONTAL,8);
+		top->AddItem(controls);
+		top->AddItem(views);
+		controls->AddView(new BButton("back","Previous",new BMessage(-400)));
+		controls->AddView(Address);
+		controls->AddView(new BStringView("total_blocks",string));
+		controls->AddItem(BSpaceLayoutItem::CreateGlue());
+		controls->AddView(new BButton("next","Next",new BMessage(-300)));
+		//	A page is 256 bytes: 16 per line, so 32 hex characters per line
+		font_height height;
+		be_plain_font->GetHeight(&height);
+		float line = height.ascent + height.descent + height.leading;
+		hexscroll->SetExplicitPreferredSize(BSize(be_plain_font->StringWidth("0") * 32 + 30,line * 16));
+		asciiscroll->SetExplicitPreferredSize(BSize(be_plain_font->StringWidth("M") * 16 + 30,line * 16));
+		views->AddView(hexscroll,2);
+		views->AddView(asciiscroll,1);
+		//	The container is complete, so the two views can fill themselves in
 		if (length < PAGE) {
-		/*	char *dvf = new char[PAGE];
-			memcpy(dvf,data,length);
-			for (int i = length; i < PAGE; i++) {
-				dvf[i] = 0;
-			}*/
 			ASCII->SetText((char *)(data),length);
 			ASCII->SetMaxBytes(PAGE);
 		} else {
@@ -244,16 +287,6 @@ ContainerView::ContainerView(unsigned char *data, size_t length) : BView(BRect(1
 			ASCII->SetText((char *)(data),PAGE);
 		}
 		HEX->SetMaxBytes(PAGE * 2);
-		res = data;
-		size = length;
-		curPage = 0;
-		Address = new AddressView(this);
-		AddChild(Address);
-		char string[20];
-		sprintf(string," / %lu",(unsigned long)(length/PAGE));
-		AddChild(new BStringView(BRect(170,10,230,25),"total_blocks",string));
-		AddChild(new BButton(BRect(220,10,280,30),"next","Next",new BMessage(-300)));
-		AddChild(new BButton(BRect(5,10,65,30),"back","Previous",new BMessage(-400)));
 	}
 	
 void ContainerView::GoToPage(int32 page,bool refresh) {
@@ -382,17 +415,24 @@ long openfile(void *m) {
 void loaddata(unsigned char *data,size_t length,BView *bkgview) {//runs when add-on starts, window is initialized, you are expected to write to it: rect is 300 x 300
 	hexd[0] = '0'; hexd[1] = '1'; hexd[2] = '2'; hexd[3] = '3'; hexd[4] = '4'; hexd[5] = '5'; hexd[6] = '6'; hexd[7] = '7'; hexd[8] = '8'; hexd[9] = '9';hexd[10]='A'; hexd[11]='B'; hexd[12]='C'; hexd[13]='D'; hexd[14]='E'; hexd[15]='F';
 	panel = new BFilePanel(B_OPEN_PANEL,new BMessenger(bkgview->Window()),NULL,0,false);
-	bkgview->AddChild(new ContainerView(data,length));
-	/*BTextView *view = new BTextView(BRect(10,10,280,260),"hex",BRect(0,0,270,280),B_FOLLOW_ALL,B_WILL_DRAW);
-	BStatusBar *status = new BStatusBar(BRect(30,100,270,150),"readstatus","Processing Data",NULL);
-	bkgview->AddChild(status);
-	//bkgview->Window()->Show();
-	view->SetText(hexit(data,length,status));
-	status->RemoveSelf();
-	delete status;
-	bkgview->AddChild(new BScrollView("hexscroll",view,B_FOLLOW_LEFT | B_FOLLOW_TOP,0,false,true));*/
-	bkgview->AddChild(new BButton(BRect(100,270,200,290),"file","Insert File...",new BMessage(-100)));
-	//bkgview->Window()->Hide();
+	ContainerView *container = new ContainerView(data,length);
+	BButton *insert = new BButton("file","Insert File...",new BMessage(-100));
+	BGroupLayout *top = new BGroupLayout(B_VERTICAL,10);
+	bkgview->SetLayout(top);
+	top->SetInsets(10,10,10,10);
+	top->AddView(container);
+	top->AddView(insert);
+	top->ItemAt(1)->SetExplicitAlignment(BAlignment(B_ALIGN_HORIZONTAL_CENTER,B_ALIGN_BOTTOM));
+	//	Ask for the minimum size first: the preferred size can come back as NaN
+	//	until the layout is validated, so the tests replace a NaN.
+	BSize min = bkgview->MinSize();
+	BSize size = bkgview->PreferredSize();
+	if (!(size.width >= min.width))
+		size.width = min.width;
+	if (!(size.height >= min.height))
+		size.height = min.height;
+	bkgview->Window()->SetSizeLimits(min.width,B_SIZE_UNLIMITED,min.height,B_SIZE_UNLIMITED);
+	bkgview->Window()->ResizeTo(size.width,size.height);
 }
 
 unsigned char* savedata(size_t *length,BView *bkgview) { //return data, clean up, and set sizeto the size of data

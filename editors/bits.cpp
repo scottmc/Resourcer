@@ -6,6 +6,8 @@
 #include <interface/Bitmap.h>
 #include <interface/View.h>
 #include <interface/Button.h>
+#include <interface/GroupLayout.h>
+#include <interface/Size.h>
 #include <storage/FilePanel.h>
 #include <storage/Entry.h>
 #include <storage/File.h>
@@ -20,23 +22,9 @@ extern "C" _EXPORT unsigned char* savedata(size_t *,BView *);
 extern "C" _EXPORT void messaging(BMessage *,BView *);
 extern "C" _EXPORT const char description[] = "Translator Bitmap";
 
-BRect find_center(uint32 width, uint32 height, BRect a);
 class BPView;
 void processTIFF(BMessage *TIFF, BPView *view);
 void loadopenbox(BPView *view);
-
-BRect find_center(uint32 width, uint32 height, BRect a) {
-	float screen_width = a.right - a.left;
-	float screen_height = a.bottom - a.top;
-	float c = ((screen_width / 2) - (width / 2)) + a.left;
-	float d = ((screen_height / 2) - (height / 2)) + a.top;
-	BRect toreturn;
-	toreturn.left = c;
-	toreturn.top = d;
-	toreturn.right = c + width;
-	toreturn.bottom = d + height;
-	return toreturn;
-	}
 
 class TIFFilter : public BRefFilter {
 	virtual bool Filter(const entry_ref *ref, BNode *node, struct stat_beos *st, const char *filetype) {
@@ -60,41 +48,56 @@ class TIFFilter : public BRefFilter {
 
 class BPView : public BView {
 	public:
-	BPView (BRect frame, const char *name, uint32 resizingMode, uint32 flags,BView *parenta,BBitmap *imagea) : BView(frame, name,resizingMode,flags) {
+	BPView (const char *name, uint32 flags,BView *parenta,BBitmap *imagea) : BView(name,flags) {
 		image = imagea;
 		parent = parenta;
-		opbut = new BButton(BRect(0,0,80,25),"opbut","Open...",new BMessage(-200));
-		 if (image == NULL) {
-		 	BRect a = find_center(80,25,BRect(frame.left,frame.bottom,frame.right,frame.bottom + 50));
-		 	opbut->MoveTo(a.left,a.top);
-		 }
-		parent->AddChild(this);
-		parent->AddChild(opbut);
-		change_image(imagea);
+		opbut = new BButton("opbut","Open...",new BMessage(-200));
+		//	The image keeps its pixel size and the button sits centred below it.
+		//	The layout follows the font for the button, and fit() follows the
+		//	size of the picture.
+		BGroupLayout *top = new BGroupLayout(B_VERTICAL,10);
+		parent->SetLayout(top);
+		top->SetInsets(10,10,10,10);
+		top->AddView(this);
+		top->AddView(opbut);
+		top->ItemAt(0)->SetExplicitAlignment(BAlignment(B_ALIGN_HORIZONTAL_CENTER,B_ALIGN_TOP));
+		top->ItemAt(1)->SetExplicitAlignment(BAlignment(B_ALIGN_HORIZONTAL_CENTER,B_ALIGN_TOP));
 		openpanel = new BFilePanel(B_OPEN_PANEL,new BMessenger(parent),NULL,B_FILE_NODE,false,NULL,new TIFFilter,false,true);
+		fit();
 	}
 	
 	void Draw(BRect updateRect) {
-		Window()->Lock();
 		if (image != NULL) {
 			DrawBitmap(image);
 		}
-		Window()->Unlock();
+	}
+	
+	//	Sizes the view to its picture (or to a blank area without one) and the
+	//	window to what the layout then asks for.
+	void fit() {
+		BSize size(300,250);
+		if (image != NULL)
+			size.Set(image->Bounds().Width(),image->Bounds().Height());
+		SetExplicitMinSize(size);
+		SetExplicitPreferredSize(size);
+		SetExplicitMaxSize(size);
+		parent->InvalidateLayout();
+		//	Ask for the minimum size first: the preferred size can come back as
+		//	NaN until the layout is validated, so the tests replace a NaN.
+		BSize min = parent->MinSize();
+		BSize pref = parent->PreferredSize();
+		if (!(pref.width >= min.width))
+			pref.width = min.width;
+		if (!(pref.height >= min.height))
+			pref.height = min.height;
+		if (parent->Window() != NULL)
+			parent->Window()->ResizeTo(pref.width,pref.height);
+		Invalidate();
 	}
 	
 	void change_image(BBitmap *bitmap) {
 		image = bitmap;
-		if (Window() != NULL)
-			Window()->Lock();
-		if (image != NULL) {
-			DrawBitmap(image);
-			Window()->ResizeTo(bitmap->Bounds().Width(),bitmap->Bounds().Height() + 50);
-			ResizeTo(bitmap->Bounds().Width(),bitmap->Bounds().Height());
-			BRect area = find_center(80,25,BRect(0,bitmap->Bounds().Height(),bitmap->Bounds().Width(),bitmap->Bounds().Height() + 50));
-			opbut->MoveTo(area.left,area.top);
-		}
-		if (Window() != NULL)
-			Window()->Unlock();
+		fit();
 	}
 	//---------------------Data------------------------
 	BBitmap *image;
@@ -119,11 +122,11 @@ void loaddata(unsigned char *data,size_t length,BView *bkgview) { //runs when ed
 	BMemoryIO *io = new BMemoryIO(data,length);
 	BBitmap *bitmap = BTranslationUtils::GetBitmap(io);
 	delete io;
-	BPView *view = new BPView(BRect(0,0,300,250),"view",B_FOLLOW_ALL_SIDES,B_WILL_DRAW | B_FULL_UPDATE_ON_RESIZE | B_FRAME_EVENTS,bkgview,bitmap);
+	new BPView("view",B_WILL_DRAW | B_FULL_UPDATE_ON_RESIZE | B_FRAME_EVENTS,bkgview,bitmap);
 }
 
 unsigned char* savedata(size_t *length,BView *bkgview) { //runs when window closes, passes back window address given in loaddata()
-	BPView *x = (BPView *)(bkgview->ChildAt(0));
+	BPView *x = (BPView *)(bkgview->FindView("view"));
 	unsigned char *data;
 	if (x->image == NULL) {
 		*length = 0;
@@ -139,8 +142,8 @@ unsigned char* savedata(size_t *length,BView *bkgview) { //runs when window clos
 	stream->DetachBitmap(&(x->image));
 	size_t head_length = *length - x->image->BitsLength();
 	memcpy(data + head_length,x->image->Bits(),*length - head_length);
-	((BPView *)(bkgview->ChildAt(0)))->openpanel->Window()->PostMessage(B_QUIT_REQUESTED);
-	delete ((BPView *)(bkgview->ChildAt(0)))->openpanel;
+	((BPView *)(bkgview->FindView("view")))->openpanel->Window()->PostMessage(B_QUIT_REQUESTED);
+	delete ((BPView *)(bkgview->FindView("view")))->openpanel;
 	/*BBitmapStream *s2 = new BBitmapStream;
 	s2->Write(data,*length);
 	s2->DetachBitmap(&x->image);
@@ -154,10 +157,10 @@ unsigned char* savedata(size_t *length,BView *bkgview) { //runs when window clos
 void messaging(BMessage *message,BView *bkgview) { //BMessages from window, to be passed here 'what' field must be a negative number
 	switch (message->what) {
 		case (uint32)-200:
-			loadopenbox((BPView *)(bkgview->ChildAt(0)));
+			loadopenbox((BPView *)(bkgview->FindView("view")));
 			break;
 		case B_REFS_RECEIVED:
-			processTIFF(message,(BPView *)(bkgview->ChildAt(0)));
+			processTIFF(message,(BPView *)(bkgview->FindView("view")));
 			break;
 	}
 }

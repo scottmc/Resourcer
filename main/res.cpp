@@ -278,7 +278,10 @@ restypeview::MouseMoved(BPoint point,uint32 transit,const BMessage *msg) {
 		case B_INSIDE_VIEW:
 			break;
 		case B_EXITED_VIEW:
-			StrokeRect(Bounds(),B_SOLID_LOW);
+			//	Redraw rather than stroke the edge in the background colour: that
+			//	line is drawn into the scrolling content, so it was carried into
+			//	the middle of the list as soon as the list was scrolled.
+			Invalidate();
 			break;
 	}
 }

@@ -2,6 +2,9 @@
 #include <image.h>
 #include <interface/Window.h>
 #include <stdio.h>
+#include <interface/GroupLayout.h>
+#include <interface/Size.h>
+#include <interface/SpaceLayoutItem.h>
 #include <interface/TextControl.h>
 #include <interface/ScrollView.h>
 #include <interface/OutlineListView.h>
@@ -33,6 +36,8 @@ BTextControl *what;
 extern "C" _EXPORT void loaddata(unsigned char *,size_t,BView *);
 extern "C" _EXPORT unsigned char* savedata(size_t *,BView *);
 extern "C" _EXPORT void messaging(BMessage *,BView *);
+//	Tells Resourcer that this editor wants a resizable window
+extern "C" _EXPORT const bool resizable = true;
 extern "C" _EXPORT const char description[] = "Archived BMessage";
 //-------------------------------------------
 
@@ -53,7 +58,7 @@ class TypeItem : public BStringItem {
 
 class PlugWin : public BWindow {
 	public:
-		PlugWin(type_code code, char *pointer, int32 ind, unsigned char* (*save)(size_t *,BView *), void (*messages)(BMessage *,BView *), char *name);
+		PlugWin(type_code code, char *pointer, int32 ind, unsigned char* (*save)(size_t *,BView *), void (*messages)(BMessage *,BView *), char *name, bool resizable);
 		bool QuitRequested(void);
 		void MessageReceived(BMessage *msg);
 		BView *gray;
@@ -70,19 +75,40 @@ class PlugWin : public BWindow {
 void loaddata(unsigned char *data,size_t length,BView *bkgview) {
 	if (length != 0)
 		msg.Unflatten((const char *)(data));
-	BRect newFrame = bkgview->Bounds();
-	newFrame.top += 30;
-	newFrame.right -= B_V_SCROLL_BAR_WIDTH;
-	newFrame.bottom -= B_H_SCROLL_BAR_HEIGHT;
-	msgview = new BOutlineListView(newFrame,"msgView",B_SINGLE_SELECTION_LIST,B_FOLLOW_ALL_SIDES);
+	//	The command constant field sits above the list; the list and its scroll
+	//	bar are layout managed, so they follow the window when it is resized.
+	msgview = new BOutlineListView("msgView",B_SINGLE_SELECTION_LIST);
 	InitListView();
-	BScrollView *scrolly = new BScrollView("msgViewScroll",msgview,B_FOLLOW_ALL_SIDES,0,true,true,B_NO_BORDER);
-	scrolly->ScrollBar(B_HORIZONTAL)->SetRange(0,0);
-	bkgview->AddChild(scrolly);
-	what = new BTextControl(BRect(10,5,150,30),"what","Command Constant: ",TypeItem(msg.what).TypeAsString(),NULL);
-	what->SetDivider(be_plain_font->StringWidth(what->Label()));
+	BScrollView *scrolly = new BScrollView("msgViewScroll",msgview,B_WILL_DRAW | B_FRAME_EVENTS,false,true,B_FANCY_BORDER);
+	what = new BTextControl("what","Command Constant: ",TypeItem(msg.what).TypeAsString(),NULL);
 	what->TextView()->SetMaxBytes(4);
-	bkgview->AddChild(what);
+	//	Room for the label and a four character code, no more
+	what->SetExplicitMaxSize(BSize(be_plain_font->StringWidth(what->Label()) + be_plain_font->StringWidth("WWWW") + 30,B_SIZE_UNSET));
+
+	BGroupLayout *top = new BGroupLayout(B_VERTICAL,5);
+	bkgview->SetLayout(top);
+	top->SetInsets(10,10,10,10);
+	BGroupLayout *row = new BGroupLayout(B_HORIZONTAL,0);
+	top->AddItem(row);
+	row->AddView(what);
+	row->AddItem(BSpaceLayoutItem::CreateGlue());
+	top->AddView(scrolly);
+
+	//	A comfortable starting size, based on the current font
+	font_height height;
+	be_plain_font->GetHeight(&height);
+	float line = height.ascent + height.descent + height.leading;
+	scrolly->SetExplicitPreferredSize(BSize(be_plain_font->StringWidth("M") * 40,line * 14));
+	//	Ask for the minimum size first: the preferred size can come back as NaN
+	//	until the layout is validated, so the tests replace a NaN.
+	BSize min = bkgview->MinSize();
+	BSize size = bkgview->PreferredSize();
+	if (!(size.width >= min.width))
+		size.width = min.width;
+	if (!(size.height >= min.height))
+		size.height = min.height;
+	bkgview->Window()->SetSizeLimits(min.width,B_SIZE_UNLIMITED,min.height,B_SIZE_UNLIMITED);
+	bkgview->Window()->ResizeTo(size.width,size.height);
 }
 
 
@@ -169,7 +195,12 @@ void messaging(BMessage *msg,BView *bkgview) {
 		::msg.FindData(name,type,index,(const void **)(&data),&length);
 		char title[255];
 		sprintf(title,"Field Type: %s Name: %s Index: %ld",TypeItem(type).TypeAsString(),name,(long)index);
-		win = new PlugWin(type,name,index,savedata,messaging,title);
+		//	An editor can export "const bool resizable = true" for a resizable window
+		bool *resizable = NULL;
+		bool canresize = false;
+		if (get_image_symbol(plugin,"resizable",B_SYMBOL_TYPE_DATA,(void **)(&resizable)) == B_NO_ERROR && resizable != NULL)
+			canresize = *resizable;
+		win = new PlugWin(type,name,index,savedata,messaging,title,canresize);
 		win->gray = new BView(BRect(0,0,300,300),"graybkgrd",B_FOLLOW_ALL_SIDES,B_WILL_DRAW | B_FRAME_EVENTS);
 		win->gray->SetViewColor(216,216,216);
 		win->AddChild(win->gray);
@@ -316,7 +347,7 @@ type_code TypeItem::Type(void) {
 //-------------------------------------------
 
 //------------------PlugInWin----------------
-PlugWin::PlugWin(type_code code, char *pointer, int32 ind, unsigned char* (*save)(size_t *,BView *), void (*messages)(BMessage *,BView *), char *name) : BWindow(BRect(400,300,700,600),name,B_TITLED_WINDOW,B_NOT_RESIZABLE | B_NOT_ZOOMABLE) {
+PlugWin::PlugWin(type_code code, char *pointer, int32 ind, unsigned char* (*save)(size_t *,BView *), void (*messages)(BMessage *,BView *), char *name, bool resizable) : BWindow(BRect(400,300,700,600),name,B_TITLED_WINDOW,resizable ? 0 : (B_NOT_RESIZABLE | B_NOT_ZOOMABLE)) {
 	savedata = save;
 	messaging = messages;
 	index = ind;
