@@ -24,6 +24,8 @@ class reswindow : public BWindow {
 		void WindowActivated(bool active);
 		bool QuitRequested(void);
 		void MessageReceived(BMessage *message);
+		void MenusBeginning(void);
+		void DuplicateSelection(void);
 		restypeview *res;
 		bool changes;
 		bool istempfile;

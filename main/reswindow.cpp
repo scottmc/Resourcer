@@ -44,6 +44,81 @@ ListScrollView::DoLayout(void) {
 	bar->MoveBy(0,-1);
 }
 
+//	Types that only make sense once in a file: the application's flags and
+//	version information and its signature. Everything else may have several.
+static bool
+can_duplicate(type_code type) {
+	return (type != 'APPF') && (type != 'APPV') && (type != 'MIMS');
+}
+
+//	The resource that is highlighted, or NULL if the highlight is on a type, a
+//	heading, an attribute or nothing.
+static DoubleItem *
+selected_resource(restypeview *list) {
+	int32 selection = list->CurrentSelection();
+	if (selection < 0)
+		return NULL;
+	BListItem *item = list->ItemAt(selection);
+	if (item->OutlineLevel() < 2)
+		return NULL;
+	DoubleItem *resource = (DoubleItem *)(item);
+	if (resource->idstring == NULL)
+		return NULL;
+	return resource;
+}
+
+void
+reswindow::MenusBeginning(void) {
+	BMenuItem *item = menus->FindItem('dupl');
+	if (item == NULL)
+		return;
+	DoubleItem *resource = selected_resource(res);
+	item->SetEnabled((resource != NULL) && can_duplicate(((TypeItem *)(res->Superitem(resource)))->type));
+}
+
+//	Copies the highlighted resource to the next unused ID above its own, keeping
+//	its name, and highlights the copy.
+void
+reswindow::DuplicateSelection(void) {
+	DoubleItem *current = selected_resource(res);
+	if (current == NULL)
+		return;
+	type_code type = ((TypeItem *)(res->Superitem(current)))->type;
+	if (!can_duplicate(type)) {
+		(new BAlert("alert","A file only needs one resource of this type, so it can't be duplicated.","OK",NULL,NULL,B_WIDTH_AS_USUAL,B_WARNING_ALERT))->Go();
+		return;
+	}
+	size_t length;
+	const void *loaded = openres->LoadResource(type,current->id,&length);
+	if (loaded == NULL)
+		return;
+	if (length >= 1024) {
+		char text[200];
+		sprintf(text,"This resource is %lu bytes (%.1f KB). Are you sure you want to duplicate it?",(unsigned long)(length),length / 1024.0);
+		BAlert *alert = new BAlert("alert",text,"Cancel","Duplicate",NULL,B_WIDTH_AS_USUAL,B_WARNING_ALERT);
+		if (alert->Go() == 0)
+			return;
+		//	The alert let other messages through, so look the resource up again
+		loaded = openres->LoadResource(type,current->id,&length);
+		if (loaded == NULL)
+			return;
+	}
+	int32 id = current->id + 1;
+	while (openres->HasResource(type,id))
+		id++;
+	unsigned char *copy = new unsigned char[length > 0 ? length : 1];
+	memcpy(copy,loaded,length);
+	char *name = new char[(current->name != NULL ? strlen(current->name) : 0) + 1];
+	strcpy(name,current->name != NULL ? current->name : "");
+	DoubleItem *item = res->AddResource(type,id,name,length,copy,false,false);
+	delete [] copy;
+	delete [] name;
+	Lock();
+	res->Select(res->IndexOf(item));
+	res->ScrollToSelection();
+	Unlock();
+}
+
 BRect
 reswindow::gettiledrect(void) {
 	BRect work = find_center(350,400);
@@ -95,6 +170,8 @@ reswindow::reswindow(const char *title,entry_ref ref) : BWindow(gettiledrect(),t
 	edit->AddItem(new BMenuItem("Cut",new BMessage(-400),'X'));
 	edit->AddItem(new BMenuItem("Copy",new BMessage(-500),'C'));
 	edit->AddItem(new BMenuItem("Paste",new BMessage(B_PASTE),'V'));
+	edit->AddItem(new BSeparatorItem);
+	edit->AddItem(new BMenuItem("Duplicate",new BMessage('dupl'),'U'));
 	BMenu *res = new BMenu("Resource");
 	menus->AddItem(res);
 	res->AddItem(new BMenuItem("Add Resource...",new BMessage(-100),'A'));
@@ -369,6 +446,9 @@ void reswindow::MessageReceived(BMessage *message) {
 					getdata(this);
 				}
 			}
+			break;
+		case 'dupl':
+			DuplicateSelection();
 			break;
 		case (uint32)-800:
 			if (res->ItemAt(res->CurrentSelection())->OutlineLevel() == 2) 
