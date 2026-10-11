@@ -40,7 +40,7 @@ SRCS= main.cpp app.cpp globals.cpp util.cpp res.cpp reswindow.cpp pluginwindow.c
 
 #	specify the resource definition files to use
 #	full path or a relative path to the resource file can be used.
-RDEFS= Resource.rdef
+RDEFS= Resourcer.rdef
 	
 #	specify the resource files to use. 
 #	full path or a relative path to the resource file can be used.
