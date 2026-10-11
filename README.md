@@ -31,3 +31,14 @@ and double-click a resource to try its editor.
 ![The resources in test.rsrc](docs/resourcer-list.png)
 
 ![The APPV editor](docs/resourcer-appv-editor.png)
+
+## RDEF export
+
+File > Export as RDEF... writes every resource in the file as an rdef script,
+the text format Haiku's `rc` compiles. Resource > Export Resource as RDEF...
+does the same for the highlighted resource, and Edit > Copy as RDEF puts it on
+the clipboard. Attributes can't be written in rdef, so they are left out.
+
+The writing code (`main/rdefexport.cpp`) is Haiku's rsrc-to-rdef decompiler
+from `src/bin/rc/decompile.cpp`, Copyright (c) 2003 Matthijs Hollemans, MIT
+license, cut down to work on resources that are already open.

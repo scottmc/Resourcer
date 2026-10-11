@@ -1,11 +1,14 @@
 // The main document window and its helper threads.
 // Declarations are in reswindow.h.
 
+#include <ctype.h>
+#include <errno.h>
 #include "includes.h"
 #include "preamble.h"
 #include "class.h"
 #include "res.h"
 #include "reswindow.h"
+#include "rdefexport.h"
 #include "pluginwindow.h"
 #include "optwindow.h"
 
@@ -69,11 +72,149 @@ selected_resource(restypeview *list) {
 
 void
 reswindow::MenusBeginning(void) {
-	BMenuItem *item = menus->FindItem('dupl');
-	if (item == NULL)
-		return;
 	DoubleItem *resource = selected_resource(res);
-	item->SetEnabled((resource != NULL) && can_duplicate(((TypeItem *)(res->Superitem(resource)))->type));
+	BMenuItem *item = menus->FindItem('dupl');
+	if (item != NULL)
+		item->SetEnabled((resource != NULL) && can_duplicate(((TypeItem *)(res->Superitem(resource)))->type));
+	item = menus->FindItem('rdfr');
+	if (item != NULL)
+		item->SetEnabled(resource != NULL);
+	item = menus->FindItem('rdfc');
+	if (item != NULL)
+		item->SetEnabled(resource != NULL);
+}
+
+//	A name for the type, such as 'ICON', for use in file names.
+static void
+type_name(type_code type,char *into) {
+	into[0] = (type >> 24) & 0xFF;
+	into[1] = (type >> 16) & 0xFF;
+	into[2] = (type >> 8) & 0xFF;
+	into[3] = type & 0xFF;
+	into[4] = 0;
+	for (int i = 0;i < 4;i++) {
+		if (!isalnum(into[i]))
+			into[i] = '_';
+	}
+}
+
+//	Asks where to put the rdef text, for the whole file or the highlighted
+//	resource. The answer comes back as 'rdfx' to SaveRDEF.
+void
+reswindow::ExportRDEF(bool whole) {
+	type_code type = 0;
+	int32 id = 0;
+	char suggestion[B_FILE_NAME_LENGTH];
+	if (whole) {
+		sprintf(suggestion,"%.*s.rdef",(int)(B_FILE_NAME_LENGTH - 6),fileref.name);
+	} else {
+		DoubleItem *current = selected_resource(res);
+		if (current == NULL)
+			return;
+		type = ((TypeItem *)(res->Superitem(current)))->type;
+		id = current->id;
+		if ((current->name != NULL) && (current->name[0] != 0)) {
+			sprintf(suggestion,"%.*s.rdef",(int)(B_FILE_NAME_LENGTH - 6),current->name);
+			//	Names such as BEOS:ICON are awkward in a file name
+			for (char *c = suggestion;*c != 0;c++) {
+				if ((*c == ':') || (*c == '/'))
+					*c = '_';
+			}
+		} else {
+			char code[5];
+			type_name(type,code);
+			sprintf(suggestion,"%s_%ld.rdef",code,(long)(id));
+		}
+	}
+	if (rdefpanel == NULL)
+		rdefpanel = new BFilePanel(B_SAVE_PANEL,new BMessenger(this),NULL,B_FILE_NODE,false);
+	BMessage *msg = new BMessage('rdfx');
+	msg->AddBool("whole",whole);
+	msg->AddUInt32("type",type);
+	msg->AddInt32("id",id);
+	rdefpanel->SetMessage(msg);
+	rdefpanel->SetSaveText(suggestion);
+	rdefpanel->Show();
+}
+
+//	Writes the rdef text to the place chosen in the panel.
+void
+reswindow::SaveRDEF(BMessage *message) {
+	entry_ref dir;
+	const char *name;
+	if ((message->FindRef("directory",&dir) != B_OK) || (message->FindString("name",&name) != B_OK))
+		return;
+	bool whole = true;
+	uint32 type = 0;
+	int32 id = 0;
+	message->FindBool("whole",&whole);
+	message->FindUInt32("type",&type);
+	message->FindInt32("id",&id);
+	BPath path(&dir);
+	path.Append(name);
+	FILE *output = fopen(path.Path(),"w");
+	if (output == NULL) {
+		char text[B_PATH_NAME_LENGTH + 100];
+		sprintf(text,"The RDEF file could not be written: %s",strerror(errno));
+		(new BAlert("alert",text,"OK",NULL,NULL,B_WIDTH_AS_USUAL,B_STOP_ALERT))->Go();
+		return;
+	}
+	status_t error;
+	int32 count = 1;
+	if (whole)
+		error = rdef_export_all(openres,output,&count);
+	else
+		error = rdef_export_resource(openres,type,id,output);
+	fclose(output);
+	if (error != B_OK) {
+		(new BAlert("alert","That resource could not be found, so nothing was exported.","OK",NULL,NULL,B_WIDTH_AS_USUAL,B_STOP_ALERT))->Go();
+		return;
+	}
+	if (!whole)
+		return;
+	//	An rdef script only holds resources, so say if attributes were left out
+	int32 attributes = 0;
+	char attrname[B_ATTR_NAME_LENGTH];
+	file->RewindAttrs();
+	while (file->GetNextAttrName(attrname) == B_OK)
+		attributes++;
+	if ((attributes > 0) || (count == 0)) {
+		char text[300];
+		if (count == 0)
+			sprintf(text,"This file has no resources, so the RDEF file is empty.");
+		else
+			sprintf(text,"The RDEF file has %ld resources. The file's %ld attributes can't be written in RDEF, so they were left out.",(long)(count),(long)(attributes));
+		(new BAlert("alert",text,"OK",NULL,NULL,B_WIDTH_AS_USUAL,B_INFO_ALERT))->Go();
+	}
+}
+
+//	Puts the highlighted resource on the clipboard as rdef text.
+void
+reswindow::CopyRDEF(void) {
+	DoubleItem *current = selected_resource(res);
+	if (current == NULL)
+		return;
+	type_code type = ((TypeItem *)(res->Superitem(current)))->type;
+	FILE *temporary = tmpfile();
+	if (temporary == NULL)
+		return;
+	if (rdef_export_resource(openres,type,current->id,temporary) == B_OK) {
+		fseek(temporary,0,SEEK_END);
+		long length = ftell(temporary);
+		if (length > 0) {
+			char *text = new char[length];
+			rewind(temporary);
+			size_t got = fread(text,1,length,temporary);
+			if (be_clipboard->Lock()) {
+				be_clipboard->Clear();
+				be_clipboard->Data()->AddData("text/plain",B_MIME_TYPE,text,got);
+				be_clipboard->Commit();
+				be_clipboard->Unlock();
+			}
+			delete [] text;
+		}
+	}
+	fclose(temporary);
 }
 
 //	Copies the highlighted resource to the next unused ID above its own, keeping
@@ -132,6 +273,7 @@ reswindow::gettiledrect(void) {
 reswindow::reswindow(const char *title,entry_ref ref) : BWindow(gettiledrect(),title,B_DOCUMENT_WINDOW,B_AUTO_UPDATE_SIZE_LIMITS) {
 	istempfile = false;
 	isquitting = false;
+	rdefpanel = NULL;
 	changes = false;
 	fileref = ref;
 	file = new BFile(&ref,B_READ_WRITE);
@@ -162,6 +304,8 @@ reswindow::reswindow(const char *title,entry_ref ref) : BWindow(gettiledrect(),t
 	file->AddItem(new BMenuItem("Revert Resources",new BMessage('rvrt'),'R'));
 	file->AddItem(new BMenuItem("Edit File Type...",new BMessage('mime'),'M'));
 	file->AddItem(new BSeparatorItem);
+	file->AddItem(new BMenuItem("Export as RDEF...",new BMessage('rdfa')));
+	file->AddItem(new BSeparatorItem);
 	BMenuItem *quit = new BMenuItem("Quit",new BMessage(B_QUIT_REQUESTED),'Q');
 	quit->SetTarget(be_app);
 	file->AddItem(quit);
@@ -169,6 +313,7 @@ reswindow::reswindow(const char *title,entry_ref ref) : BWindow(gettiledrect(),t
 	menus->AddItem(edit);
 	edit->AddItem(new BMenuItem("Cut",new BMessage(-400),'X'));
 	edit->AddItem(new BMenuItem("Copy",new BMessage(-500),'C'));
+	edit->AddItem(new BMenuItem("Copy as RDEF",new BMessage('rdfc'),'C',B_SHIFT_KEY));
 	edit->AddItem(new BMenuItem("Paste",new BMessage(B_PASTE),'V'));
 	edit->AddItem(new BSeparatorItem);
 	edit->AddItem(new BMenuItem("Duplicate",new BMessage('dupl'),'U'));
@@ -179,6 +324,7 @@ reswindow::reswindow(const char *title,entry_ref ref) : BWindow(gettiledrect(),t
 	res->AddItem(new BMenuItem("Resource Info...",new BMessage(-300),'I'));
 	res->AddItem(new BSeparatorItem);
 	res->AddItem(new BMenuItem("Copy to Attribute/Resource",new BMessage(-900)));
+	res->AddItem(new BMenuItem("Export Resource as RDEF...",new BMessage('rdfr')));
 	res->AddItem(new BSeparatorItem);
 	res->AddItem(new BMenuItem("Open with Generic Editor",new BMessage(-800)));
 	this->res = new restypeview(openres);
@@ -446,6 +592,18 @@ void reswindow::MessageReceived(BMessage *message) {
 					getdata(this);
 				}
 			}
+			break;
+		case 'rdfa':
+			ExportRDEF(true);
+			break;
+		case 'rdfr':
+			ExportRDEF(false);
+			break;
+		case 'rdfc':
+			CopyRDEF();
+			break;
+		case 'rdfx':
+			SaveRDEF(message);
 			break;
 		case 'dupl':
 			DuplicateSelection();

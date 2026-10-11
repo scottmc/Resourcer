@@ -36,7 +36,7 @@ APP_MIME_SIG=
 #	if two source files with the same name (source.c or source.cpp)
 #	are included from different directories.  Also note that spaces
 #	in folder names do not work well with this makefile.
-SRCS= main.cpp app.cpp globals.cpp util.cpp res.cpp reswindow.cpp pluginwindow.cpp optwindow.cpp
+SRCS= main.cpp app.cpp globals.cpp util.cpp res.cpp reswindow.cpp pluginwindow.cpp optwindow.cpp rdefexport.cpp
 
 #	specify the resource definition files to use
 #	full path or a relative path to the resource file can be used.

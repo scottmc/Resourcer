@@ -26,6 +26,9 @@ class reswindow : public BWindow {
 		void MessageReceived(BMessage *message);
 		void MenusBeginning(void);
 		void DuplicateSelection(void);
+		void ExportRDEF(bool whole);
+		void SaveRDEF(BMessage *message);
+		void CopyRDEF(void);
 		restypeview *res;
 		bool changes;
 		bool istempfile;
@@ -34,6 +37,7 @@ class reswindow : public BWindow {
 		BFile *file;
 		entry_ref fileref;
 		BMenuBar *menus;
+		BFilePanel *rdefpanel;
 };
 
 #endif /* RESOURCER_MAIN_RESWINDOW_H */
