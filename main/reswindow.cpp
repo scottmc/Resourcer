@@ -415,7 +415,14 @@ int32 copy(void *y) {
 	type = cur->type;
 	id = cura->id;
 	if (cura->idstring != NULL)
-		data = (unsigned char *)x->openres->LoadResource(type,id,&size);
+		{
+		//	LoadResource hands back memory owned by the BResources, so work on a copy
+		const void *loaded = x->openres->LoadResource(type,id,&size);
+		if (loaded == NULL)
+			return 0;
+		data = new unsigned char[size];
+		memcpy(data,loaded,size);
+		}
 	else {
 		attr_info info;
 		x->file->GetAttrInfo(cura->name,&info);
@@ -535,7 +542,12 @@ int32 copytoattr(void *y) {
 				unsigned char *data;
 				size_t size;
 				char *name;
-				data = (unsigned char *)x->openres->LoadResource(type,id,&size);
+				//	LoadResource hands back memory owned by the BResources, so work on a copy
+				const void *loaded = x->openres->LoadResource(type,id,&size);
+				if (loaded == NULL)
+					return 0;
+				data = new unsigned char[size];
+				memcpy(data,loaded,size);
 				attr_info inf;
 				if (cura->name == NULL) {
 					name = new char[255];
