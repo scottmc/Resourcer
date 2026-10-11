@@ -89,7 +89,10 @@ pluginwindow::QuitRequested(void) {
 void
 pluginwindow::MessageReceived(BMessage *message) {
 	int32 y = message->what;
-	if ((y < 0) || (y == B_REFS_RECEIVED)) {
+	//	Editors get negative messages from their own controls, B_REFS_RECEIVED and
+	//	B_SIMPLE_DATA when files are dropped on them, and 'ICNE' when Icon-O-Matic
+	//	saves an icon the VICN editor asked it to edit.
+	if ((y < 0) || (y == B_REFS_RECEIVED) || (y == B_SIMPLE_DATA) || (y == 'ICNE')) {
 		(*(plugin.messaging))(message,gray);
 	} else {
 		BWindow::MessageReceived(message);

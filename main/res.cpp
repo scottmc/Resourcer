@@ -319,6 +319,8 @@ type_code code_from_MIME(char *MIME) {
 		type = 'CSTR';
 	if (BMimeType("image").Contains(&mime))
 		type = 'bits';
+	if (mime == BMimeType("image/x-hvif"))		//---a vector icon is not a picture
+		type = B_VECTOR_ICON_TYPE;
 	if (BMimeType("video").Contains(&mime))
 		type = 'MOOV';
 	if (BMimeType("resource").Contains(&mime)) {
@@ -337,6 +339,9 @@ const char *MIME_from_code(type_code code) {
 			break;
 		case 'bits':
 			MIME = "image/x-portable-pixmap";
+			break;
+		case B_VECTOR_ICON_TYPE:
+			MIME = "image/x-hvif";
 			break;
 		case 'MOOV':
 			MIME = "video";
@@ -402,6 +407,35 @@ bool restypeview::InitiateDrag(BPoint point,int32 index, bool selected) {
 		todrag->AddInt32("id",y->id);
 	DragMessage(todrag,ItemFrame(IndexOf(y)));
 	return true;
+}
+
+//	Adds the vector icon resources ('VICN') of a dropped file, usually an
+//	application, to the open resources. A resource whose id is already taken gets
+//	the next free one. Returns how many were added, zero for a file that is not an
+//	application or has no vector icons.
+static int32 add_vector_icons(restypeview *list,reswindow *window,BFile *file) {
+	BResources source;
+	if (source.SetTo(file) != B_OK)
+		return 0;
+	int32 added = 0;
+	int32 sourceid;
+	const char *sourcename;
+	size_t length;
+	for (int32 i = 0;source.GetResourceInfo(B_VECTOR_ICON_TYPE,i,&sourceid,&sourcename,&length);i++) {
+		BString name(sourcename != NULL ? sourcename : "");
+		const void *loaded = source.LoadResource(B_VECTOR_ICON_TYPE,sourceid,&length);
+		if (loaded == NULL || length == 0)
+			continue;
+		unsigned char *copy = new unsigned char[length];
+		memcpy(copy,loaded,length);
+		int32 id = sourceid;
+		while (window->openres->HasResource(B_VECTOR_ICON_TYPE,id))
+			id++;
+		list->AddResource(B_VECTOR_ICON_TYPE,id,name.String(),length,copy,false,false);
+		delete [] copy;
+		added++;
+	}
+	return added;
 }
 
 void restypeview::MessageReceived(BMessage *msg) {
@@ -585,6 +619,10 @@ void restypeview::MessageReceived(BMessage *msg) {
 					static char clipping[] = "Clipping";
 					name = clipping;
 				} else {
+					if (add_vector_icons(this,x,&file) > 0) {
+						delete [] ownedname;
+						return;
+					}
 					type = code_from_MIME(adname);
 					if (type == 'bits') {
 						BMallocIO io;
