@@ -15,13 +15,14 @@
 #include <app/Message.h>
 #include <app/Application.h>
 #include <app/Roster.h>
+#include <support/String.h>
 //-------------------------------------------
 
 //------------Prototypes---------------------
 class TypeItem;
 
 void InitListView(void);
-void GetSelected(type_code *type, int32 *index, char **name);
+bool GetSelected(type_code *type, int32 *index, BString *name);
 TypeItem *FindType(type_code type);
 //-------------------------------------------
 
@@ -46,6 +47,7 @@ class TypeItem : public BStringItem {
 	public:
 		TypeItem(type_code code);
 		TypeItem(const char *string_code);
+		~TypeItem(void);
 		void SetTypeCode(type_code code);
 		void SetTypeCode(const char *string_code);
 		char *TypeAsString(void);
@@ -53,6 +55,7 @@ class TypeItem : public BStringItem {
 	private:
 		void SetDescription(void);
 		const char *description;
+		char *descbuf;			//---the description when it came from an editor, owned by the item
 		type_code type;
 		char asstring[5];		//---what TypeAsString() returns, owned by the item
 };
@@ -133,7 +136,7 @@ void messaging(BMessage *msg,BView *bkgview) {
 	if (msg->what != -100)
 		return;
 	int32 index;
-	char *name;
+	BString name;
 	type_code type;
 	if (msgview->CurrentSelection() < 0)
 		return;
@@ -144,11 +147,13 @@ void messaging(BMessage *msg,BView *bkgview) {
 			msgview->Expand(msgview->ItemAt(msgview->CurrentSelection()));
 		return;
 	}
-	GetSelected(&type,&index,&name);
+	//	The name is only needed here: the editor window keeps a copy of its own
+	if (!GetSelected(&type,&index,&name))
+		return;
 	//-----------Check if already open------------------
 	PlugWin *win;
 	for (int i = 0;(win = (PlugWin *)openWindows.ItemAt(i)) != NULL; i++) {
-		if ((win->type == type) && (win->index == index) && (strcmp(name,win->name) == 0)) {
+		if ((win->type == type) && (win->index == index) && (strcmp(name.String(),win->name) == 0)) {
 			win->Show();
 			return;
 		}
@@ -193,15 +198,15 @@ void messaging(BMessage *msg,BView *bkgview) {
 	//---------Read Data----------------------------------
 		unsigned char *data;
 		ssize_t length;
-		::msg.FindData(name,type,index,(const void **)(&data),&length);
+		::msg.FindData(name.String(),type,index,(const void **)(&data),&length);
 		char title[255];
-		sprintf(title,"Field Type: %s Name: %s Index: %ld",TypeItem(type).TypeAsString(),name,(long)index);
+		sprintf(title,"Field Type: %s Name: %s Index: %ld",TypeItem(type).TypeAsString(),name.String(),(long)index);
 		//	An editor can export "const bool resizable = true" for a resizable window
 		bool *resizable = NULL;
 		bool canresize = false;
 		if (get_image_symbol(plugin,"resizable",B_SYMBOL_TYPE_DATA,(void **)(&resizable)) == B_NO_ERROR && resizable != NULL)
 			canresize = *resizable;
-		win = new PlugWin(type,name,index,savedata,messaging,title,canresize);
+		win = new PlugWin(type,(char *)(name.String()),index,savedata,messaging,title,canresize);
 		win->gray = new BView(BRect(0,0,300,300),"graybkgrd",B_FOLLOW_ALL_SIDES,B_WILL_DRAW | B_FRAME_EVENTS);
 		win->gray->SetViewColor(216,216,216);
 		win->AddChild(win->gray);
@@ -249,30 +254,34 @@ TypeItem *FindType(type_code type) {
 	return candidate;
 }
 
-void GetSelected(type_code *type, int32 *index, char **name) {
+//	Says which field the selected row stands for. A type heading isn't a field:
+//	it is expanded and false is returned.
+bool GetSelected(type_code *type, int32 *index, BString *name) {
 	int32 i = msgview->FullListCurrentSelection();
 	BStringItem *selected = (BStringItem *)msgview->FullListItemAt(i);
+	if (selected == NULL)
+		return false;
 	switch (selected->OutlineLevel()) {
 		case 0:
 			msgview->Expand(selected);
 			*index = -1;
-			break;
+			return false;
 		case 1:
 			*index = 0;
-			*name = new char[strlen(selected->Text()) + 1];
-			strcpy(*name,selected->Text());
+			*name = selected->Text();
 			*type = ((TypeItem *)(msgview->Superitem(selected)))->Type();
-			break;
+			return true;
 		case 2:
 			{
 				long value = 0;
 				sscanf(selected->Text(),"%ld",&value);
 				*index = value;
 			}
-			*name = new char[strlen(((BStringItem *)(msgview->Superitem(selected)))->Text()) + 1];
-			strcpy(*name,((BStringItem *)(msgview->Superitem(selected)))->Text());
+			*name = ((BStringItem *)(msgview->Superitem(selected)))->Text();
 			*type = ((TypeItem *)(msgview->Superitem(msgview->Superitem(selected))))->Type();
+			return true;
 	}
+	return false;
 }
 	
 //------------------------------------------
@@ -281,13 +290,19 @@ void GetSelected(type_code *type, int32 *index, char **name) {
 
 //------------TypeItem----------------------
 TypeItem::TypeItem(type_code code) : BStringItem("NULL") {
+	descbuf = NULL;
 	type = code;
 	SetDescription();
 }
 
 TypeItem::TypeItem(const char *string_code) : BStringItem(string_code) {
+	descbuf = NULL;
 	SetTypeCode(string_code);
 	SetDescription();
+}
+
+TypeItem::~TypeItem(void) {
+	delete [] descbuf;
 }
 
 void TypeItem::SetTypeCode(type_code code) {
@@ -296,6 +311,9 @@ void TypeItem::SetTypeCode(type_code code) {
 }
 
 void TypeItem::SetDescription(void) {
+	//	The description is looked up again whenever the type changes
+	delete [] descbuf;
+	descbuf = NULL;
 	//-----------Get Add-Ons directory------------------
 		app_info info;
 		be_app->GetAppInfo(&info);
@@ -316,9 +334,9 @@ void TypeItem::SetDescription(void) {
 		if (get_image_symbol(editor,"description",B_SYMBOL_TYPE_DATA,(void **)(&temp)) != B_NO_ERROR)
 			description = "Unknown";
 		else {
-			char *copy = new char[strlen(temp) + 1];
-			strcpy(copy,temp);
-			description = copy;
+			descbuf = new char[strlen(temp) + 1];
+			strcpy(descbuf,temp);
+			description = descbuf;
 		}
 		if (editor >= 0)
 			unload_add_on(editor);
