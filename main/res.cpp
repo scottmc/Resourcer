@@ -448,6 +448,63 @@ static int32 add_vector_icons(restypeview *list,reswindow *window,BFile *file) {
 	return added;
 }
 
+//	The image formats that have an editor of their own: the same list as
+//	IMAGE_EDITORS in the top level Makefile.
+static bool is_image_type(type_code type) {
+	static const type_code types[] = {'GIF ','JPEG','PNG ','PPM ','TGA ','BMP ','TIFF','WebP','PSD ','AVIF','ICNS','ICO ','PCX ','JP2 ','SGI ','WBI ','RAWI'};
+	for (size_t i = 0;i < sizeof(types) / sizeof(types[0]);i++) {
+		if (types[i] == type)
+			return true;
+	}
+	return false;
+}
+
+//	If a drop landed on the heading of an image type, or on one of its resources,
+//	says which type. Other types, and attributes, are left to the usual drop.
+static bool image_type_dropped_on(restypeview *list,BMessage *msg,type_code *type) {
+	BPoint where = msg->DropPoint();
+	list->ConvertFromScreen(&where);
+	int32 index = list->IndexOf(where);
+	if (index < 0)
+		return false;
+	BListItem *item = list->ItemAt(index);
+	if (is_instance_of(item,DoubleItem))
+		item = list->Superitem(item);
+	if (item == NULL || !is_instance_of(item,TypeItem) || list->Superitem(item) != list->resources)
+		return false;
+	*type = ((TypeItem *)(item))->type;
+	return is_image_type(*type);
+}
+
+//	Reads an image file as the given image format. A file that already is in that
+//	format is kept as it is, anything else is converted by Haiku's translators.
+//	On success the data is new[]'d and belongs to the caller.
+static bool image_for_type(BFile *file,type_code type,unsigned char **data,size_t *length) {
+	BTranslatorRoster *roster = BTranslatorRoster::Default();
+	translator_info info;
+	if (roster->Identify(file,NULL,&info,0,NULL,B_TRANSLATOR_BITMAP) != B_OK) {
+		(new BAlert("alert","That file is not an image Haiku can read.","OK",NULL,NULL,B_WIDTH_AS_USUAL,B_STOP_ALERT))->Go();
+		return false;
+	}
+	if (info.type == type) {
+		off_t size = 0;
+		file->GetSize(&size);
+		*data = new unsigned char[size > 0 ? size : 1];
+		*length = size > 0 ? file->ReadAt(0,*data,size) : 0;
+		return true;
+	}
+	BMallocIO io;
+	file->Seek(0,SEEK_SET);
+	if (roster->Translate(file,&info,NULL,&io,type) != B_OK || io.BufferLength() == 0) {
+		(new BAlert("alert","That image could not be converted to this format.","OK",NULL,NULL,B_WIDTH_AS_USUAL,B_STOP_ALERT))->Go();
+		return false;
+	}
+	*length = io.BufferLength();
+	*data = new unsigned char[*length];
+	memcpy(*data,io.Buffer(),*length);
+	return true;
+}
+
 void restypeview::MessageReceived(BMessage *msg) {
 	if (msg->WasDropped())
 		Invalidate();		//---removes the drop highlight; see MouseMoved
@@ -605,6 +662,18 @@ void restypeview::MessageReceived(BMessage *msg) {
 				delete [] ownedname;
 				return;
 			} else {
+				type_code target;
+				if (image_type_dropped_on(this,msg,&target)) {
+					unsigned char *image;
+					size_t imagelength;
+					if (image_for_type(&file,target,&image,&imagelength)) {
+						for (id = 0;x->openres->HasResource(target,id);id++) {}
+						AddResource(target,id,name,imagelength,image,false,false);
+						delete [] image;
+					}
+					delete [] ownedname;
+					return;
+				}
 				{
 					BMessage *q = &clipped;
 					char *temp;
