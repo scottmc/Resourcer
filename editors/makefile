@@ -78,6 +78,11 @@ endif
 ifeq ($(EDITOR_NAME),nois)
 	EXTRA_LIBS = media translation
 endif
+#	The image editors use the translators to read and convert pictures
+IMAGE_EDITORS = GIF JPEG PNG PPM TGA BMP TIFF WebP PSD AVIF ICNS ICO PCX JP2 SGI WBI RAWI
+ifneq ($(filter $(EDITOR_NAME),$(IMAGE_EDITORS)),)
+	EXTRA_LIBS = translation
+endif
 LIBS=  root be $(EXTRA_LIBS)
 
 #	specify additional paths to directories following the standard

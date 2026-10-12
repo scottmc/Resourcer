@@ -18,12 +18,14 @@ class TypeItem : public BStringItem {
 		TypeItem(type_code code);
 		~TypeItem(void);
 		char *TypeCode(void);
+		char *EditorName(void);
 		void SetTypeCode(char *code);
 		type_code type;
 		const char *description;
 	private:
 		char *descbuf;
 		char codebuf[5];
+		char editorbuf[5];
 };
 
 class DoubleItem : public BListItem {

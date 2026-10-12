@@ -8,27 +8,6 @@
 #include "pluginwindow.h"
 #include "optwindow.h"
 
-//	Names for types that have no editor of their own, such as the image formats
-//	the translators know. NULL for a type that isn't one of them.
-static const char *
-builtin_description(type_code type) {
-	switch (type) {
-		case 'JPEG':
-			return "JPEG Image";
-		case 'PNG ':
-			return "PNG Image";
-		case 'GIF ':
-			return "GIF Image";
-		case 'BMP ':
-			return "BMP Image";
-		case 'TIFF':
-			return "TIFF Image";
-		case 'TGA ':
-			return "TGA Image";
-	}
-	return NULL;
-}
-
 TypeItem::TypeItem(type_code code) : BStringItem("type") {
 	type = code;
 	descbuf = NULL;
@@ -40,13 +19,11 @@ TypeItem::TypeItem(type_code code) : BStringItem("type") {
 	entry.SetTo(&dir,"editors");
 	BPath path;
 	entry.GetPath(&path);
-	path.Append(TypeCode());
+	path.Append(EditorName());
 	//	entry still names the editors directory, so look at the editor itself
 	entry.SetTo(path.Path());
 	if (entry.Exists() == false) {
-		description = builtin_description(type);
-		if (description == NULL)
-			description = "Unknown";
+		description = "Unknown";
 	} else {
 		image_id editor = load_add_on(path.Path());
 		char *temp;
@@ -76,6 +53,16 @@ TypeItem::TypeCode(void) {
 	strncpy(codebuf,(char *)(&code),4);
 	codebuf[4] = 0;
 	return codebuf;
+}
+
+//	The name of the editor for this type: the type code without any spaces at
+//	its end, so 'PNG ' is edited by PNG.
+char *
+TypeItem::EditorName(void) {
+	strcpy(editorbuf,TypeCode());
+	for (int i = 3;i > 0 && editorbuf[i] == ' ';i--)
+		editorbuf[i] = 0;
+	return editorbuf;
 }
 
 void
@@ -777,7 +764,7 @@ void DoubleItem::Invoke(bool generic) {
 	dir.SetTo(&entry);                    //-|
 	TypeItem *super = (TypeItem *)parent->Superitem(this);  //-Get our type code
 	type_code type = super->type;                           //-|
-	BPath path(&dir,super->TypeCode());					//--editors/typecode, the path of our editor
+	BPath path(&dir,super->EditorName());					//--editors/typecode, the path of our editor
 	plug_in plugin;										//--handy little struct, holds useful information, the def is in preamble.h
 	plugin.win = x;                                     //-Set it up
 	entry.SetTo(path.Path());

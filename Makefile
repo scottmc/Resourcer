@@ -39,12 +39,17 @@ export BUILDHOME
 BUILD_DIR   := $(CURDIR)/build
 EDITORS_OUT := $(BUILD_DIR)/editors
 
+# Editors for the image formats Haiku has translators for. Each is a one-line
+# editors/<TYPE>.cpp that includes editors/imageview.h; a type code that ends
+# in a space, such as 'PNG ', is named without it, as PNG.
+IMAGE_EDITORS := GIF JPEG PNG PPM TGA BMP TIFF WebP PSD AVIF ICNS ICO PCX JP2 SGI WBI RAWI
+
 # Editors built from a single source file, editors/<TYPE>.cpp,
 # using the shared editors/makefile.
 SINGLE_FILE_EDITORS := \
 	ALGN AMTX APPF APPV BOOL BPNT BYTE CADA CHAR CSTR CURS DBLE FLOT ICON LLNG \
 	LONG MICN MIME MIMS MSGG OFFT PATN RECT RGBC SHRT SIZE SIZT SSZT TEXT \
-	TIME UBYT ULLG ULNG USHT VICN bits nois unknown
+	TIME UBYT ULLG ULNG USHT VICN bits nois unknown $(IMAGE_EDITORS)
 
 # Editors that have a directory and makefile of their own: editors/<TYPE>/
 MULTI_FILE_EDITORS := MOOV WIND

@@ -155,7 +155,10 @@ optwindow::init_typemenu(BPopUpMenu *menu) {
 			const char *temp;
 			if (get_image_symbol(editor,"description",B_SYMBOL_TYPE_DATA,(void **)(&temp)) == B_NO_ERROR) {
 				entry.GetName(name);
-				itemLista->AddString("typecode",name);
+				//	A type code is four characters; PNG.cpp edits 'PNG '
+				char code[5];
+				sprintf(code,"%-4.4s",name);
+				itemLista->AddString("typecode",code);
 				itemLista->AddString("description",temp);
 			}
 			unload_add_on(editor);

@@ -40,7 +40,7 @@ pluginwindow::QuitRequested(void) {
 	data = (*(plugin.savedata))(&give,gray);
 	if (data == NULL) {
 		BAlert *alert = new BAlert("whoops","The resource could not be written because the editor passed a NULL pointer (i.e. it didn't write any data).","OK",NULL,NULL,B_WIDTH_AS_USUAL,B_STOP_ALERT);
-		alert->Go();
+		alert->Go(NULL);
 		RemoveChildren();
 		unload_add_on(plugin.plugin);
 		delete [] plugin.olddata;
@@ -58,17 +58,19 @@ pluginwindow::QuitRequested(void) {
 		plugin.win->openres->RemoveResource(typea,id);
 		if (plugin.win->openres->AddResource(typea,id,data,give,yname) != B_NO_ERROR) {
 			BAlert *alert = new BAlert("whoops","The resource could not be written.","OK",NULL,NULL,B_WIDTH_AS_USUAL,B_STOP_ALERT);
-			alert->Go();
+			alert->Go(NULL);
 			RemoveChildren();
 			unload_add_on(plugin.plugin);
 			delete [] data;
 			delete [] plugin.olddata;
 			return true;
 		}
-	} else {
+	} else if (changes) {
+		//	An attribute that wasn't edited is left alone. Some, such as the
+		//	SYS:PACKAGE ones on a package file, can't be written at all.
 		if (plugin.win->file->WriteAttr(yname,typea,0,data,give) <= 0) {
 			BAlert *alert = new BAlert("whoops","The attribute could not be written.","OK",NULL,NULL,B_WIDTH_AS_USUAL,B_STOP_ALERT);
-			alert->Go();
+			alert->Go(NULL);
 			RemoveChildren();
 			unload_add_on(plugin.plugin);
 			delete [] data;
