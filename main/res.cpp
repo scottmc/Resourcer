@@ -8,6 +8,27 @@
 #include "pluginwindow.h"
 #include "optwindow.h"
 
+//	Names for types that have no editor of their own, such as the image formats
+//	the translators know. NULL for a type that isn't one of them.
+static const char *
+builtin_description(type_code type) {
+	switch (type) {
+		case 'JPEG':
+			return "JPEG Image";
+		case 'PNG ':
+			return "PNG Image";
+		case 'GIF ':
+			return "GIF Image";
+		case 'BMP ':
+			return "BMP Image";
+		case 'TIFF':
+			return "TIFF Image";
+		case 'TGA ':
+			return "TGA Image";
+	}
+	return NULL;
+}
+
 TypeItem::TypeItem(type_code code) : BStringItem("type") {
 	type = code;
 	descbuf = NULL;
@@ -23,7 +44,9 @@ TypeItem::TypeItem(type_code code) : BStringItem("type") {
 	//	entry still names the editors directory, so look at the editor itself
 	entry.SetTo(path.Path());
 	if (entry.Exists() == false) {
-		description = "Unknown";
+		description = builtin_description(type);
+		if (description == NULL)
+			description = "Unknown";
 	} else {
 		image_id editor = load_add_on(path.Path());
 		char *temp;
