@@ -7,6 +7,8 @@
 #include "reswindow.h"
 #include "pluginwindow.h"
 #include "optwindow.h"
+#include <storage/FindDirectory.h>
+#include <strings.h>
 
 TypeItem::TypeItem(type_code code) : BStringItem("type") {
 	type = code;
@@ -505,10 +507,134 @@ static bool image_for_type(BFile *file,type_code type,unsigned char **data,size_
 	return true;
 }
 
+//	True for a file named like an rdef source, such as icons.rdef.
+static bool is_rdef_name(const char *name) {
+	size_t length = strlen(name);
+	return length > 5 && strcasecmp(name + length - 5,".rdef") == 0;
+}
+
+//	Adds an argument to a shell command line, quoted so that spaces and quotes
+//	in a file name reach the command unchanged.
+static void add_quoted(BString *command,const char *argument) {
+	*command << "'";
+	for (const char *c = argument;*c != 0;c++) {
+		if (*c == '\'')
+			*command << "'\\''";
+		else
+			command->Append(c,1);
+	}
+	*command << "'";
+}
+
+//	Compiles an rdef file into the resource file at output with Haiku's own rc,
+//	which also finds the rdef file's #include files next to it. The output name
+//	has to end in ".rsrc", as rc adds that itself if it doesn't. rc exits with
+//	success even when it fails, so what counts is whether it made the file. When it
+//	didn't, the reason rc gave is left in errors.
+static bool compile_rdef(const entry_ref *ref,const char *output,BString *errors) {
+	BPath path(ref);
+	BPath folder;
+	path.GetParent(&folder);
+	BString command("rc -I ");
+	add_quoted(&command,folder.Path());
+	command << " -o ";
+	add_quoted(&command,output);
+	command << " ";
+	add_quoted(&command,path.Path());
+	command << " 2>&1";
+	FILE *pipe = popen(command.String(),"r");
+	if (pipe == NULL) {
+		*errors = "rc could not be started.";
+		return false;
+	}
+	char buffer[256];
+	size_t got;
+	while ((got = fread(buffer,1,sizeof(buffer) - 1,pipe)) > 0) {
+		buffer[got] = 0;
+		if (errors->Length() < 1000)
+			*errors << buffer;
+	}
+	pclose(pipe);
+	if (!BEntry(output).Exists()) {
+		if (errors->Length() == 0)
+			*errors = "rc did not make a resource file.";
+		return false;
+	}
+	return true;
+}
+
+//	Picks a name for a new temporary resource file, the way File > New does.
+static void temporary_resource_path(BPath *path) {
+	BPath folder;
+	find_directory(B_SYSTEM_TEMP_DIRECTORY,&folder);
+	BDirectory tmp(folder.Path());
+	BEntry entry;
+	char text[B_FILE_NAME_LENGTH];
+	sprintf(text,"tmpresfile0.rsrc");
+	for (int i = 1;tmp.FindEntry(text,&entry) != B_ENTRY_NOT_FOUND;i++)
+		sprintf(text,"tmpresfile%d.rsrc",i);
+	path->SetTo(folder.Path(),text);
+}
+
+//	An rdef file was dropped on the list: compile it, then either open the result
+//	as a new resource file or merge its resources into this window's file.
+static void rdef_dropped(restypeview *list,reswindow *window,const entry_ref *ref) {
+	char name[B_FILE_NAME_LENGTH];
+	BEntry(ref,true).GetName(name);
+	BString text("\"");
+	text << name << "\" is an rdef file.\n\nCreate a new resource file from it, or merge its resources into \"" << window->Title() << "\"?";
+	BAlert *alert = new BAlert("rdef",text.String(),"Cancel","Merge","New File",B_WIDTH_AS_USUAL,B_OFFSET_SPACING,B_INFO_ALERT);
+	alert->SetShortcut(0,B_ESCAPE);
+	int32 choice = alert->Go();
+	if (choice != 1 && choice != 2)
+		return;
+	BPath temp;
+	temporary_resource_path(&temp);
+	BString errors;
+	if (!compile_rdef(ref,temp.Path(),&errors)) {
+		BEntry(temp.Path()).Remove();
+		BString message("rc could not compile \"");
+		message << name << "\":\n\n" << errors;
+		(new BAlert("alert",message.String(),"OK",NULL,NULL,B_WIDTH_AS_USUAL,B_STOP_ALERT))->Go();
+		return;
+	}
+	if (choice == 1) {
+		//	Merge. A resource with the same type and ID as one already here is
+		//	replaced by the one from the rdef file.
+		BFile compiled(temp.Path(),B_READ_ONLY);
+		window->CloseWindows();
+		list->MakeEmpty();
+		status_t result = window->openres->MergeFrom(&compiled);
+		list->Init(window->openres);
+		BEntry(temp.Path()).Remove();
+		if (result != B_OK) {
+			(new BAlert("alert","The resources could not be merged.","OK",NULL,NULL,B_WIDTH_AS_USUAL,B_STOP_ALERT))->Go();
+			return;
+		}
+		window->changes = true;
+		return;
+	}
+	//	New file: the compiled file becomes an untitled window, like File > New.
+	//	Closing it asks to save it, and Save As moves it out of the temporary folder.
+	BFile compiled(temp.Path(),B_READ_WRITE);
+	BNodeInfo(&compiled).SetType("application/x-be-resource");
+	entry_ref created;
+	get_ref_for_path(temp.Path(),&created);
+	BString title(name);
+	title.Truncate(title.Length() - 5);
+	title << ".rsrc";
+	reswindow *fresh = new reswindow(title.String(),created);
+	fresh->istempfile = true;
+	fresh->changes = true;
+}
+
 void restypeview::MessageReceived(BMessage *msg) {
+	//	A drop is handled below. Passing it to the list view as well only made
+	//	Haiku print "couldn't understand the message" for every file dropped.
 	if (msg->WasDropped())
 		Invalidate();		//---removes the drop highlight; see MouseMoved
-	BOutlineListView::MessageReceived(msg);
+	else
+		BOutlineListView::MessageReceived(msg);
 	reswindow *x = (reswindow *)(Window());
 	char *name;
 	char *ownedname = NULL;		//---allocated here, freed once the resource is added
@@ -643,6 +769,11 @@ void restypeview::MessageReceived(BMessage *msg) {
 			}
 			name = ownedname = new char[B_FILE_NAME_LENGTH];
 			BEntry(&ref).GetName(name);
+			if (is_rdef_name(name)) {
+				rdef_dropped(this,x,&ref);
+				delete [] ownedname;
+				return;
+			}
 			BFile file(&ref, B_READ_ONLY);
 			BNodeInfo(&file).GetType(adname); 
 			if ((strcmp(adname,"application/x-be-resource") == 0)) {

@@ -32,7 +32,7 @@ and double-click a resource to try its editor.
 
 ![The APPV editor](docs/resourcer-appv-editor.png)
 
-## RDEF export
+## RDEF import and export
 
 File > Export as RDEF... writes every resource in the file as an rdef script,
 the text format Haiku's `rc` compiles. Resource > Export Resource as RDEF...
@@ -42,3 +42,8 @@ the clipboard. Attributes can't be written in rdef, so they are left out.
 The writing code (`main/rdefexport.cpp`) is Haiku's rsrc-to-rdef decompiler
 from `src/bin/rc/decompile.cpp`, Copyright (c) 2003 Matthijs Hollemans, MIT
 license, cut down to work on resources that are already open.
+
+Dropping an `.rdef` file on the resource list compiles it with `rc` and asks
+whether to open the result as a new file or merge it into the open one. A
+resource with the same type and ID as an existing one is replaced. `rc` must be
+in the path, as it is on a standard Haiku install.
