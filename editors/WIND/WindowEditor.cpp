@@ -114,7 +114,20 @@ WindowEditor::WindowEditor(BRect frame, const char* name,
 //------------------------------------------------------------------------------
 WindowEditor::~WindowEditor()
 {
+	// The editing window lives in its own thread and its views' classes live
+	// in this add-on.  Ask it to quit and wait until its thread has finished,
+	// otherwise the add-on can be unloaded while the window is still being
+	// destroyed (crash in BView::_Detach).
+	BLooper *looper = NULL;
+	thread_id thread = -1;
+	if (fEditWindow.Target(&looper) != NULL && looper != NULL)
+		thread = looper->Thread();
 	fEditWindow.SendMessage(MSG_WINDOW_QUIT);
+	if (thread >= 0)
+	{
+		status_t result;
+		wait_for_thread(thread, &result);
+	}
 }
 //------------------------------------------------------------------------------
 void WindowEditor::AttachedToWindow()

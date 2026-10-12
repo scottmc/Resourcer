@@ -192,7 +192,12 @@ void loaddata(unsigned char* data,size_t length, BView* bkgview)
 			list->AddUnder(new InterfaceItem("Checkbox",new BCheckBox(BRect(0,0,100,50),"newcheckbox","New Checkbox",new BMessage('none'))),controls);
 			list->AddUnder(new InterfaceItem("Radio Button",new BRadioButton(BRect(0,0,100,50),"newrbutton","New Radio Button",new BMessage('none'))),controls);
 			list->AddUnder(new InterfaceItem("Slider",new BSlider(BRect(0,0,100,50),"newslider","New Slider",new BMessage('none'),0,100)),controls);
-			BMenuField *tempx = new BMenuField(BRect(0,0,100,50),"newpopupmenu","New Pop-Up Menu: ",new BPopUpMenu("newpopupmenu"));
+			// An empty menu makes the dragged preview crash (double free of a
+			// menu item label) when the preview bitmap is deleted, so give it
+			// an item.
+			BPopUpMenu *tempmenu = new BPopUpMenu("newpopupmenu");
+			tempmenu->AddItem(new BMenuItem("Item",new BMessage('none')));
+			BMenuField *tempx = new BMenuField(BRect(0,0,100,50),"newpopupmenu","New Pop-Up Menu: ",tempmenu);
 			tempx->SetDivider(be_plain_font->StringWidth(tempx->Label()));
 			list->AddUnder(new InterfaceItem("Pop-Up Menu",tempx),controls);
 			list->AddUnder(new InterfaceItem("Color Picker",new BColorControl(BPoint(0,0),B_CELLS_32x8,8,"newcolpicker",new BMessage('none'))),controls);
