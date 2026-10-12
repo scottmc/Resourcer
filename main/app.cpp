@@ -125,6 +125,13 @@ void BRApplication::RefsReceived(BMessage *message) {
 	char title[B_FILE_NAME_LENGTH];
 	BEntry entry(&ref,true);
 	entry.GetName(title);
+	if (is_rdef_name(title)) {
+		//	An rdef file is compiled and opened as a new file
+		open_rdef_as_new(&ref);
+		openpan = false;
+		saveas = false;
+		return;
+	}
 	new reswindow(title,ref); //---reswindow does all the dirty work
 	openpan = false;          //---All these booleans could probably be consolidated
 	saveas = false;

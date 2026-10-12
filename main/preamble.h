@@ -24,11 +24,18 @@ typedef struct{
 
 
 
+bool is_rdef_name(const char *name);	//---in res.cpp
+
 class appFilter : public BRefFilter {
 	public:
 		bool Filter(const entry_ref *ref, BNode *node, struct stat_beos *st,
 					   const char *mimetype) {
 			if (BEntry(ref,true).IsDirectory())
+				return true;
+			//	An rdef file can be opened too, it is compiled into a new file
+			char filename[B_FILE_NAME_LENGTH];
+			BEntry(ref,true).GetName(filename);
+			if (is_rdef_name(filename))
 				return true;
 			BFile type(ref,B_READ_WRITE);
 			BResources super;

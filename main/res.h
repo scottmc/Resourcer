@@ -10,6 +10,8 @@ class DoubleItem;
 class pluginwindow;
 
 int sortList(const BListItem *one,const BListItem *two);
+bool is_rdef_name(const char *name);
+bool open_rdef_as_new(const entry_ref *ref);
 type_code code_from_MIME(char *MIME);
 const char *MIME_from_code(type_code code);
 

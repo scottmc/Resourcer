@@ -508,7 +508,7 @@ static bool image_for_type(BFile *file,type_code type,unsigned char **data,size_
 }
 
 //	True for a file named like an rdef source, such as icons.rdef.
-static bool is_rdef_name(const char *name) {
+bool is_rdef_name(const char *name) {
 	size_t length = strlen(name);
 	return length > 5 && strcasecmp(name + length - 5,".rdef") == 0;
 }
@@ -576,46 +576,29 @@ static void temporary_resource_path(BPath *path) {
 	path->SetTo(folder.Path(),text);
 }
 
-//	An rdef file was dropped on the list: compile it, then either open the result
-//	as a new resource file or merge its resources into this window's file.
-static void rdef_dropped(restypeview *list,reswindow *window,const entry_ref *ref) {
+//	Compiles an rdef file into a new temporary resource file. If rc fails the
+//	reason is shown and false is returned.
+static bool compile_to_temporary(const entry_ref *ref,const char *name,BPath *temp) {
+	temporary_resource_path(temp);
+	BString errors;
+	if (compile_rdef(ref,temp->Path(),&errors))
+		return true;
+	BEntry(temp->Path()).Remove();
+	BString message("rc could not compile \"");
+	message << name << "\":\n\n" << errors;
+	(new BAlert("alert",message.String(),"OK",NULL,NULL,B_WIDTH_AS_USUAL,B_STOP_ALERT))->Go();
+	return false;
+}
+
+//	Compiles an rdef file and opens the result as an untitled window, like
+//	File > New. Closing it asks to save it, and Save As moves it out of the
+//	temporary folder.
+bool open_rdef_as_new(const entry_ref *ref) {
 	char name[B_FILE_NAME_LENGTH];
 	BEntry(ref,true).GetName(name);
-	BString text("\"");
-	text << name << "\" is an rdef file.\n\nCreate a new resource file from it, or merge its resources into \"" << window->Title() << "\"?";
-	BAlert *alert = new BAlert("rdef",text.String(),"Cancel","Merge","New File",B_WIDTH_AS_USUAL,B_OFFSET_SPACING,B_INFO_ALERT);
-	alert->SetShortcut(0,B_ESCAPE);
-	int32 choice = alert->Go();
-	if (choice != 1 && choice != 2)
-		return;
 	BPath temp;
-	temporary_resource_path(&temp);
-	BString errors;
-	if (!compile_rdef(ref,temp.Path(),&errors)) {
-		BEntry(temp.Path()).Remove();
-		BString message("rc could not compile \"");
-		message << name << "\":\n\n" << errors;
-		(new BAlert("alert",message.String(),"OK",NULL,NULL,B_WIDTH_AS_USUAL,B_STOP_ALERT))->Go();
-		return;
-	}
-	if (choice == 1) {
-		//	Merge. A resource with the same type and ID as one already here is
-		//	replaced by the one from the rdef file.
-		BFile compiled(temp.Path(),B_READ_ONLY);
-		window->CloseWindows();
-		list->MakeEmpty();
-		status_t result = window->openres->MergeFrom(&compiled);
-		list->Init(window->openres);
-		BEntry(temp.Path()).Remove();
-		if (result != B_OK) {
-			(new BAlert("alert","The resources could not be merged.","OK",NULL,NULL,B_WIDTH_AS_USUAL,B_STOP_ALERT))->Go();
-			return;
-		}
-		window->changes = true;
-		return;
-	}
-	//	New file: the compiled file becomes an untitled window, like File > New.
-	//	Closing it asks to save it, and Save As moves it out of the temporary folder.
+	if (!compile_to_temporary(ref,name,&temp))
+		return false;
 	BFile compiled(temp.Path(),B_READ_WRITE);
 	BNodeInfo(&compiled).SetType("application/x-be-resource");
 	entry_ref created;
@@ -626,6 +609,41 @@ static void rdef_dropped(restypeview *list,reswindow *window,const entry_ref *re
 	reswindow *fresh = new reswindow(title.String(),created);
 	fresh->istempfile = true;
 	fresh->changes = true;
+	return true;
+}
+
+//	An rdef file was dropped on the list: either open it as a new resource file
+//	or merge its resources into this window's file.
+static void rdef_dropped(restypeview *list,reswindow *window,const entry_ref *ref) {
+	char name[B_FILE_NAME_LENGTH];
+	BEntry(ref,true).GetName(name);
+	BString text("\"");
+	text << name << "\" is an rdef file.\n\nCreate a new resource file from it, or merge its resources into \"" << window->Title() << "\"?";
+	BAlert *alert = new BAlert("rdef",text.String(),"Cancel","Merge","New File",B_WIDTH_AS_USUAL,B_OFFSET_SPACING,B_INFO_ALERT);
+	alert->SetShortcut(0,B_ESCAPE);
+	int32 choice = alert->Go();
+	if (choice == 2) {
+		open_rdef_as_new(ref);
+		return;
+	}
+	if (choice != 1)
+		return;
+	//	Merge. A resource with the same type and ID as one already here is
+	//	replaced by the one from the rdef file.
+	BPath temp;
+	if (!compile_to_temporary(ref,name,&temp))
+		return;
+	BFile compiled(temp.Path(),B_READ_ONLY);
+	window->CloseWindows();
+	list->MakeEmpty();
+	status_t result = window->openres->MergeFrom(&compiled);
+	list->Init(window->openres);
+	BEntry(temp.Path()).Remove();
+	if (result != B_OK) {
+		(new BAlert("alert","The resources could not be merged.","OK",NULL,NULL,B_WIDTH_AS_USUAL,B_STOP_ALERT))->Go();
+		return;
+	}
+	window->changes = true;
 }
 
 void restypeview::MessageReceived(BMessage *msg) {
