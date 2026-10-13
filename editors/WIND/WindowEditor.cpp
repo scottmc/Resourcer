@@ -271,13 +271,68 @@ status_t WindowEditor::ArchiveWindow(BMessage* archive)
 void WindowEditor::Init()
 {
 	SetViewColor(216, 216, 216);
-	fTitleText = new BTextControl(BRect(10,10,190,30),"title","Title: ",fWindowInfo.title.c_str(),new BMessage(MSG_WINDOW_SET_TITLE));
+	float width = Bounds().Width() - 20;
+	float w, h;
+	fTitleText = new BTextControl(BRect(10,10,10 + width,30),"title","Title: ",fWindowInfo.title.c_str(),new BMessage(MSG_WINDOW_SET_TITLE));
 	fTitleText->SetDivider(be_plain_font->StringWidth("Title: "));
+	fTitleText->GetPreferredSize(&w, &h);
+	fTitleText->ResizeTo(width, h);
 	AddChild(fTitleText);
 
 	InitLookMenu();
 	InitFeelMenu();
 	InitFlagsBoxes();
+}
+//------------------------------------------------------------------------------
+float WindowEditor::PreferredWidth()
+{
+	// Width needed by the widest member, for the current plain font size.
+	font_height fh;
+	be_plain_font->GetHeight(&fh);
+	float em = ceilf(fh.ascent + fh.descent);
+	float menuPad = 2 * em + 12;
+	float widest = 0;
+	float w;
+
+	w = be_plain_font->StringWidth("Title: ") +
+		be_plain_font->StringWidth("Untitled Window");
+	if (w > widest)
+		widest = w;
+
+	float label = be_plain_font->StringWidth("Window Look: ");
+	for (int i = 0; WindowLooks[i].label; ++i)
+	{
+		w = label + be_plain_font->StringWidth(WindowLooks[i].label) + menuPad;
+		if (w > widest)
+			widest = w;
+	}
+
+	label = be_plain_font->StringWidth("Window Behavior: ");
+	for (int i = 0; WindowFeels[i].label; ++i)
+	{
+		w = label + be_plain_font->StringWidth(WindowFeels[i].label) + menuPad;
+		if (w > widest)
+			widest = w;
+	}
+	// margins either side of the fields
+	widest += 20;
+
+	// The check boxes sit in a scrolling view inside a labelled box, which
+	// adds margins, the scroll bar and borders around the widest box.
+	float widestBox = 0;
+	for (int i = 0; WindowFlags[i].name; ++i)
+	{
+		BCheckBox temp(BRect(0, 0, 100, 10), "temp", WindowFlags[i].label, NULL);
+		float h;
+		temp.GetPreferredSize(&w, &h);
+		if (w > widestBox)
+			widestBox = w;
+	}
+	w = widestBox + 8 + B_V_SCROLL_BAR_WIDTH + 3 + 12 + 4 + 28;
+	if (w > widest)
+		widest = w;
+
+	return ceilf(widest);
 }
 //------------------------------------------------------------------------------
 void WindowEditor::InitLookMenu()
@@ -329,7 +384,9 @@ void WindowEditor::InitLookMenu()
 			break;
 	}
 
-	fLookField = new BMenuField(BRect(10,40,240,60),"look","Window Look: ",menu);
+	float h = fTitleText->Frame().Height();
+	float top = fTitleText->Frame().bottom + 8;
+	fLookField = new BMenuField(BRect(10,top,Bounds().Width() - 10,top + h),"look","Window Look: ",menu);
 	fLookField->SetDivider(be_plain_font->StringWidth("Window Look: "));
 	AddChild(fLookField);
 }
@@ -385,7 +442,9 @@ void WindowEditor::InitFeelMenu()
 			break;
 	}
 
-	fFeelField = new BMenuField(BRect(10,70,240,90),"look","Window Behavior: ",menu);
+	float h = fLookField->Frame().Height();
+	float top = fLookField->Frame().bottom + 8;
+	fFeelField = new BMenuField(BRect(10,top,Bounds().Width() - 10,top + h),"look","Window Behavior: ",menu);
 	fFeelField->SetDivider(be_plain_font->StringWidth("Window Behavior: "));
 	AddChild(fFeelField);
 }
@@ -393,13 +452,12 @@ void WindowEditor::InitFeelMenu()
 void WindowEditor::InitFlagsBoxes()
 {
 	BRect work = Bounds();
-	work.left = 10;
-	work.top = 100;
+	// Same side padding as the list on the Elements tab: the scroller inside
+	// the box ends up 20 from each edge (14 here plus 6 inside the box).
+	work.left = 14;
+	work.top = fFeelField->Frame().bottom + 10;
 	work.bottom -= 5;
-	work.right -= 10;
-	work.right -= 10;
-	int i = 20;
-	int inc = 10;
+	work.right -= 14;
 	BBox* box = new BBox(work, "flags");
 	BCheckBox* cbox;
 	BMessage* msg;
@@ -443,6 +501,8 @@ void WindowEditor::InitFlagsBoxes()
 	scroller->ResizeTo(inner.Width(), inner.Height());
 	box->AddChild(scroller);
 #if 0
+	int i = 20;
+	int inc = 10;
 	msg = new BMessage(MSG_WINDOW_SET_FLAG);
 	msg->AddInt32("flags",B_NOT_MOVABLE);
 	box->AddChild(new BCheckBox(BRect(10,i,120,i+inc),"nmov","Movable",msg));

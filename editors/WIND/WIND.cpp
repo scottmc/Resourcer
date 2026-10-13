@@ -16,6 +16,7 @@
 #include <interface/Bitmap.h>
 #include <interface/Box.h>
 #include <interface/Button.h>
+#include <interface/ControlLook.h>
 #include <interface/CheckBox.h>
 #include <interface/ColorControl.h>
 #include <interface/ListItem.h>
@@ -133,7 +134,7 @@ class InterfaceItem : public BStringItem
 class InterfaceListView : public BOutlineListView
 {
 	public:
-		InterfaceListView(void) : BOutlineListView(BRect(20,20,230,200),"elements") {}
+		InterfaceListView(float width) : BOutlineListView(BRect(20,20,width - 20 - B_V_SCROLL_BAR_WIDTH,200),"elements") {}
 		bool InitiateDrag(BPoint /*point*/, int32 index, bool /*wasSelected*/)
 		{
 			if (ItemAt(index)->OutlineLevel() != 1)
@@ -178,8 +179,50 @@ void loaddata(unsigned char* data,size_t length, BView* bkgview)
 	bkgview->Window()->SetFlags(B_NOT_H_RESIZABLE | B_NOT_ZOOMABLE |
 								B_NOT_MINIMIZABLE | B_WILL_ACCEPT_FIRST_CLICK);
 	bkgview->Window()->SetLook(B_FLOATING_WINDOW_LOOK);
-	bkgview->Window()->ResizeTo(250,350);
-	BTabView *tabs = new BTabView(BRect(0,0,350,350),"tabs",B_WIDTH_FROM_WIDEST);
+
+	//-------------Size the window for the widest text-----
+	// Works for any plain font size: take the widest of the Window tab, the
+	// Elements tab instruction and the row of tab labels.
+	font_height fh;
+	be_plain_font->GetHeight(&fh);
+	float fontheight = ceilf(fh.ascent + fh.descent);
+	const char *instruction = "Drag a List Item to the Window to Add It";
+	float instructionwidth = be_plain_font->StringWidth(instruction);
+	// BTabView does not resize the tab views, so measure what it leaves for
+	// them: a throwaway tab view shows the border around its container.
+	BTabView *probe = new BTabView(BRect(0,0,300,300),"probe",B_WIDTH_FROM_WIDEST);
+	float borderwidth = 300 - probe->ContainerView()->Bounds().Width();
+	delete probe;
+
+	float need = WindowEditor::PreferredWidth();
+	if (instructionwidth + 40 > need)
+		need = instructionwidth + 40;
+	float width = need + borderwidth;
+	// BTabView with B_WIDTH_FROM_WIDEST makes every tab as wide as the widest
+	// label plus padding (see BTabView::TabFrame).
+	float tabpad = ceilf(be_control_look->DefaultLabelSpacing() * 3.3f);
+	float tabwidest = be_plain_font->StringWidth("Focus View");
+	if (be_plain_font->StringWidth("Window") > tabwidest)
+		tabwidest = be_plain_font->StringWidth("Window");
+	if (be_plain_font->StringWidth("Elements") > tabwidest)
+		tabwidest = be_plain_font->StringWidth("Elements");
+	float tabstrip = 2 * be_control_look->ComposeSpacing(B_USE_WINDOW_SPACING)
+		+ 3 * (tabwidest + tabpad);
+	if (tabstrip > width)
+		width = tabstrip;
+	width = ceilf(width);
+	if (width < 250)
+		width = 250;
+	float height = 350;
+	if (fontheight * 17 > height)
+		height = ceilf(fontheight * 17);
+
+	bkgview->Window()->ResizeTo(width,height);
+	BTabView *tabs = new BTabView(BRect(0,0,width,height),"tabs",B_WIDTH_FROM_WIDEST);
+	// The tab views are made as big as the container the tab view gives them
+	BRect panel = tabs->ContainerView()->Bounds();
+	float panelwidth = panel.Width();
+	float panelheight = panel.Height();
 	editpanel = new EditingPanel;
 	tabs->AddTab(editpanel);
 	tabs->TabAt(0)->SetLabel("Focus View");
@@ -187,22 +230,22 @@ void loaddata(unsigned char* data,size_t length, BView* bkgview)
 	//-------------Init Editable Window------------------
 	if (length == 0)
 	{
-		wineditor = new WindowEditor(BRect(0, 0, 250, 330), "wineditpanel",
+		wineditor = new WindowEditor(BRect(0, 0, panelwidth, panelheight), "wineditpanel",
 									 mainwin, editpanel);
 	}
 	else
 	{
-		wineditor = new WindowEditor(BRect(0, 0, 250, 330), "wineditpanel",
+		wineditor = new WindowEditor(BRect(0, 0, panelwidth, panelheight), "wineditpanel",
 									 mainwin, editpanel, data);
 	}
 	tabs->AddTab(wineditor);
 	tabs->TabAt(1)->SetLabel("Window");
 
 	//-------------Init Toolbar---------------------------
-	BView *y = new BView(BRect(0,0,250,300),"viewtoolbar",B_FOLLOW_ALL_SIDES,0);
+	BView *y = new BView(BRect(0,0,panelwidth,panelheight),"viewtoolbar",B_FOLLOW_ALL_SIDES,0);
 	y->SetViewColor(216,216,216);
-	y->AddChild(new BStringView(BRect(20,210,20+be_plain_font->StringWidth("Drag a List Item to the Window to Add It"),230),"instructions","Drag a List Item to the Window to Add It",B_FOLLOW_TOP | B_FOLLOW_H_CENTER));
-	BOutlineListView *list = new InterfaceListView;
+	y->AddChild(new BStringView(BRect(20,210,20+instructionwidth,210+fontheight+2),"instructions",instruction,B_FOLLOW_TOP | B_FOLLOW_H_CENTER));
+	BOutlineListView *list = new InterfaceListView(panelwidth);
 	BStringItem *controls = new BStringItem("Controls");
 	BStringItem *visuals = new BStringItem("Visual Organizers");
 	BStringItem *editable = new BStringItem("Editable Items");
@@ -233,7 +276,11 @@ void loaddata(unsigned char* data,size_t length, BView* bkgview)
 			BTextControl *tempy = new BTextControl(BRect(0,0,100,50),"newtextfield","Text Field ",NULL,new BMessage('none'));
 			tempy->SetDivider(be_plain_font->StringWidth(tempy->Label()));
 			list->AddUnder(new InterfaceItem("Text Field",tempy),editable);
-	y->AddChild(new BScrollView("scroller",list,B_FOLLOW_ALL_SIDES,0,false,true));
+	// Same padding on both sides: 20 from the left and right edge.
+	BScrollView *scroller = new BScrollView("scroller",list,B_FOLLOW_ALL_SIDES,0,false,true);
+	scroller->MoveTo(20,20);
+	scroller->ResizeTo(panelwidth - 40,182);
+	y->AddChild(scroller);
 	tabs->AddTab(y);
 	tabs->TabAt(2)->SetLabel("Elements");
 	bkgview->AddChild(tabs);

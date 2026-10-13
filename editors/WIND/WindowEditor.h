@@ -43,6 +43,9 @@ class WindowEditor : public BView
 
 		status_t ArchiveWindow(BMessage* archive);
 
+		// Width needed to show the widest text member at the current font size
+		static float PreferredWidth();
+
 	private:
 		void	Init();
 		void	InitLookMenu();
