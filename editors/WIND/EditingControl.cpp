@@ -136,6 +136,16 @@ void EditingControl::Pulse(void)
 		edge.bottom += 10;
 		edge.right += 10;
 		ResizeTo(edge.right,edge.bottom);
+		// controlled may have been left without a window by an earlier
+		// reparenting; put it back so the conversions below are valid.
+		if (controlled != NULL && controlled->Window() == NULL) {
+			// It may still hang off a parent that is itself detached, in which
+			// case AddChild would refuse it, so take it off that parent first.
+			controlled->RemoveSelf();
+			Window()->AddChild(controlled);
+			if (controlled->Window() == NULL)
+				controlled = NULL;
+		}
 		if (controlled != NULL) {
 			BRect empty = controlled->ConvertToScreen(controlled->Bounds());
 			empty = Window()->ConvertFromScreen(empty);
@@ -143,12 +153,20 @@ void EditingControl::Pulse(void)
 			empt.x -= 1;empt.y -= 1;
 			BView *posparent = Window()->FindView(empt);
 			if (posparent != NULL) {
-				if (posparent->ConvertToScreen(posparent->Bounds()).Contains(controlled->ConvertToScreen(controlled->Bounds()))) {
+				// Menus and pop-up menu fields cannot hold child views; adding
+				// to them silently fails and leaves the view without a window.
+				bool ismenu = is_kind_of(posparent,BMenu) || is_kind_of(posparent,BMenuField) ||
+					is_kind_of(posparent->Parent(),BMenuField);
+				if (!ismenu && posparent->ConvertToScreen(posparent->Bounds()).Contains(controlled->ConvertToScreen(controlled->Bounds()))) {
 					BRect wait = controlled->ConvertToScreen(controlled->Bounds());
 					wait = posparent->ConvertFromScreen(wait);
 					controlled->RemoveSelf();
 					controlled->MoveTo(wait.LeftTop());
 					posparent->AddChild(controlled);
+					if (controlled->Window() == NULL) {
+						controlled->RemoveSelf();
+						Window()->AddChild(controlled);
+					}
 				}
 			}
 		}
