@@ -94,10 +94,15 @@ void EditingWindow::MessageReceived(BMessage *msg)
 			}
 			else
 			{
-				if (cntrl->controlled == KeyMenuBar())
+				// There may be no menu bar to remove, e.g. when the box is
+				// unchecked before one was added, so check for NULL.
+				BMenuBar *bar = KeyMenuBar();
+				if (bar == NULL)
+					break;
+				if (cntrl->controlled == bar)
 					cntrl->KeyDown(new char(B_DELETE),1);
 				else
-					KeyMenuBar()->RemoveSelf();
+					bar->RemoveSelf();
 			}
 			break;
 		}
