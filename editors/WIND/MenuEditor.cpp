@@ -56,6 +56,7 @@ void MenuEditor::AttachedToWindow()
 {
 	if (!fInit)
 	{
+		fInit = true;
 		BRect rect(Frame());
 		BRect frame(10, 110, rect.Width() - 10, 130);
 		fLabelText = new BTextControl(frame, "label", "Label: ", "",
