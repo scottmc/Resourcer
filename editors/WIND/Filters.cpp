@@ -93,6 +93,14 @@ filter_result DropFilter::Filter(BMessage* msg,BHandler** /*target*/)
 		return B_DISPATCH_MESSAGE;
 	controlled->MoveTo(point);
 	((BWindow *)(Looper()))->AddChild(controlled);
+	if (controlled->Window() == NULL)
+	{
+		// It was not attached (AddChild refused it), and the conversions
+		// below need a window, so give up on this drop.
+		delete controlled;
+		delete message;
+		return B_SKIP_MESSAGE;
+	}
 	BRect empty = controlled->ConvertToScreen(controlled->Bounds());
 	empty = ((BWindow *)(Looper()))->ConvertFromScreen(empty);
 	BPoint empt = empty.LeftTop();
@@ -108,8 +116,14 @@ filter_result DropFilter::Filter(BMessage* msg,BHandler** /*target*/)
 			controlled->RemoveSelf();
 			controlled->MoveTo(wait.LeftTop());
 			posparent->AddChild(controlled);
+			if (controlled->Window() == NULL)
+			{
+				controlled->RemoveSelf();
+				((BWindow *)(Looper()))->AddChild(controlled);
+			}
 		}
 	}
+	delete message;
 	return B_SKIP_MESSAGE;
 }
 //------------------------------------------------------------------------------
