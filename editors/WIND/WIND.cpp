@@ -100,16 +100,33 @@ const pattern STIPPLED = {{240,240,240,240,15,15,15,15}};
 class InterfaceItem : public BStringItem
 {
 	public:
-		InterfaceItem(const char *label,BView *tocreate) : BStringItem(label)
+		// If preview is given, it is archived instead and only used to draw
+		// the drag image (see InterfaceListView::InitiateDrag).
+		InterfaceItem(const char *label,BView *tocreate,BView *preview = NULL) : BStringItem(label)
 		{
 			what_a_drag = new BMessage;
+			what_a_preview = NULL;
 			tocreate->ResizeToPreferred();
 			tocreate->Archive(what_a_drag,true);
 			drag_size = tocreate->Bounds();
 			delete tocreate;	
+			if (preview != NULL)
+			{
+				what_a_preview = new BMessage;
+				preview->ResizeToPreferred();
+				preview->Archive(what_a_preview,true);
+				delete preview;
+			}
+		}
+
+		~InterfaceItem()
+		{
+			delete what_a_drag;
+			delete what_a_preview;
 		}
 
 		BMessage *what_a_drag;
+		BMessage *what_a_preview;
 		BRect drag_size;
 };
 
@@ -124,7 +141,9 @@ class InterfaceListView : public BOutlineListView
 			BRect temp = ((InterfaceItem *)(ItemAt(index)))->drag_size;
 			BMessage *msg = ((InterfaceItem *)(ItemAt(index)))->what_a_drag;
 			BBitmap *bits = new BBitmap(temp,BScreen(Window()).ColorSpace(),true);
-			BView *view = (BView *)(instantiate_object(msg));
+			InterfaceItem *item = (InterfaceItem *)(ItemAt(index));
+			BMessage *pmsg = item->what_a_preview != NULL ? item->what_a_preview : msg;
+			BView *view = (BView *)(instantiate_object(pmsg));
 			bits->AddChild(view);
 			view->Window()->Lock();
 			view->Draw(view->Bounds());
@@ -199,7 +218,10 @@ void loaddata(unsigned char* data,size_t length, BView* bkgview)
 			tempmenu->AddItem(new BMenuItem("Item",new BMessage('none')));
 			BMenuField *tempx = new BMenuField(BRect(0,0,100,50),"newpopupmenu","New Pop-Up Menu: ",tempmenu);
 			tempx->SetDivider(be_plain_font->StringWidth(tempx->Label()));
-			list->AddUnder(new InterfaceItem("Pop-Up Menu",tempx),controls);
+			// Deleting an unarchived BMenuField (the drag preview) crashes with
+			// a double free on Haiku, so the drag image uses a plain text
+			// view instead of a live pop-up menu.
+			list->AddUnder(new InterfaceItem("Pop-Up Menu",tempx,new BStringView(BRect(0,0,100,50),"newpopupmenupreview","New Pop-Up Menu")),controls);
 			list->AddUnder(new InterfaceItem("Color Picker",new BColorControl(BPoint(0,0),B_CELLS_32x8,8,"newcolpicker",new BMessage('none'))),controls);
 		list->AddItem(visuals);
 			list->AddUnder(new InterfaceItem("Static Text",new BStringView(BRect(0,0,100,50),"newstatictext","Static Text")),visuals);
