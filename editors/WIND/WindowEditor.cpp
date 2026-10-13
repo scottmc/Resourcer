@@ -11,7 +11,10 @@
 #include <interface/MenuField.h>
 #include <interface/MenuItem.h>
 #include <interface/PopUpMenu.h>
+#include <interface/ScrollBar.h>
+#include <interface/ScrollView.h>
 #include <interface/TextControl.h>
+#include <math.h>
 
 // Project Includes ------------------------------------------------------------
 
@@ -79,6 +82,59 @@ FlagFlipNameLabelQuad WindowFlags[] =
 };
 
 //------------------------------------------------------------------------------
+// The view that holds the window flag checkboxes in a single column.  It sits
+// inside a BScrollView and keeps the vertical scroll bar in step with its size.
+class FlagsContent : public BView
+{
+	public:
+		FlagsContent(BRect frame)
+			:	BView(frame, "flagscontent", B_FOLLOW_ALL_SIDES,
+					  B_FRAME_EVENTS),
+				fContentHeight(0),
+				fStep(1)
+		{
+			SetViewColor(ui_color(B_PANEL_BACKGROUND_COLOR));
+		}
+
+		void SetContentSize(float height, float step)
+		{
+			fContentHeight = height;
+			fStep = step;
+		}
+
+		void AttachedToWindow()
+		{
+			BView::AttachedToWindow();
+			UpdateScrollBar();
+		}
+
+		void FrameResized(float width, float height)
+		{
+			BView::FrameResized(width, height);
+			UpdateScrollBar();
+		}
+
+	private:
+		void UpdateScrollBar()
+		{
+			BScrollBar* bar = ScrollBar(B_VERTICAL);
+			if (bar == NULL)
+				return;
+
+			float visible = Bounds().Height();
+			float range = fContentHeight - visible;
+			if (range < 0)
+				range = 0;
+			bar->SetRange(0, range);
+			if (fContentHeight > 0)
+				bar->SetProportion(visible / fContentHeight);
+			bar->SetSteps(fStep, visible > fStep ? visible - fStep : fStep);
+		}
+
+		float	fContentHeight;
+		float	fStep;
+};
+//------------------------------------------------------------------------------
 WindowEditor::WindowEditor(BRect frame, const char* name,
 						   const BMessenger& MainWindow,
 						   const BMessenger& EditPanel)
@@ -134,6 +190,9 @@ void WindowEditor::AttachedToWindow()
 {
 	if (!fInit)
 	{
+		// Init() adds all the controls, so it must only run once; this is
+		// called every time the tab is selected again.
+		fInit = true;
 		Init();
 	}
 
@@ -346,44 +405,43 @@ void WindowEditor::InitFlagsBoxes()
 	BMessage* msg;
 	box->SetLabel("Window Flags");
 	uint32 flags = fWindowInfo.flags;
-	bool longLabel;
 
+	// All the checkboxes go in one column on the left, inside a scrolling
+	// view, so none of them are squeezed or clipped.
+	font_height fh;
+	be_bold_font->GetHeight(&fh);
+	float top = ceilf(fh.ascent + fh.descent) + 6;
+	BRect inner(6, top, work.Width() - 6, work.Height() - 6);
+	FlagsContent* content = new FlagsContent(BRect(0, 0,
+		inner.Width() - B_V_SCROLL_BAR_WIDTH - 3, inner.Height() - 2));
+
+	float y = 4;
+	float step = 20;
 	for (int index = 0; WindowFlags[index].name; ++index)
 	{
-		longLabel = strlen(WindowFlags[index].label) > 20;
-		// First column of checkboxes
 		msg = new BMessage(MSG_WINDOW_SET_FLAG);
 		msg->AddInt32("flags", WindowFlags[index].flag);
-		cbox = new BCheckBox(BRect(10, i, longLabel ? 210 : 125, i + inc),
+		cbox = new BCheckBox(BRect(4, y, 100, y + 10),
 							 WindowFlags[index].name, WindowFlags[index].label, msg);
+		cbox->ResizeToPreferred();
+		cbox->MoveTo(4, y);
 		fFlagBoxes.push_back(cbox);
-		box->AddChild(cbox);
+		content->AddChild(cbox);
 		if (WindowFlags[index].flip == (flags & WindowFlags[index].flag))
 		{
 			cbox->SetValue(B_CONTROL_ON);
 		}
 
-		// We skip to the next row as needed to make room for long labels
-		if (!longLabel && WindowFlags[index + 1].name)
-		{
-			++index;
-			// Second column of checkboxes
-			msg = new BMessage(MSG_WINDOW_SET_FLAG);
-			msg->AddInt32("flags", WindowFlags[index].flag);
-			cbox = new BCheckBox(BRect(130, i, 210, i + inc),
-								 WindowFlags[index].name,
-								 WindowFlags[index].label,
-								 msg);
-			fFlagBoxes.push_back(cbox);
-			box->AddChild(cbox);
-			if (WindowFlags[index].flip == (flags & WindowFlags[index].flag))
-			{
-				cbox->SetValue(B_CONTROL_ON);
-			}
-		}
-
-		i += inc * 2;
+		step = cbox->Bounds().Height() + 4;
+		y += step;
 	}
+	content->SetContentSize(y + 2, step);
+
+	BScrollView* scroller = new BScrollView("flagsscroller", content,
+		B_FOLLOW_ALL_SIDES, 0, false, true);
+	scroller->MoveTo(inner.LeftTop());
+	scroller->ResizeTo(inner.Width(), inner.Height());
+	box->AddChild(scroller);
 #if 0
 	msg = new BMessage(MSG_WINDOW_SET_FLAG);
 	msg->AddInt32("flags",B_NOT_MOVABLE);
@@ -481,7 +539,7 @@ uint32 WindowEditor::MakeBitmask(void)
 {
 	uint32 bitmask = 0;
 
-	for (uint32 i = 0; i < fFlagBoxes.size(); ++i)
+	for (uint32 i = 0; i < fFlagBoxes.size() && WindowFlags[i].name; ++i)
 	{
 		if (WindowFlags[i].flag != (int32)MSG_WINDOW_ADD_MENU &&
 			WindowFlags[i].flip == fFlagBoxes[i]->Value())
