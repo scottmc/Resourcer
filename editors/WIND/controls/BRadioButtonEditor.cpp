@@ -66,6 +66,11 @@ const char* BRadioButtonEditor::Supports()
 	return "BRadioButton";
 }
 //------------------------------------------------------------------------------
+bool BRadioButtonEditor::UsesLayout() const
+{
+	return true;
+}
+//------------------------------------------------------------------------------
 void BRadioButtonEditor::Init()
 {
 	if (!fChecked)
