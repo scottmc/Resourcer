@@ -40,6 +40,10 @@ class BViewEditor
 		virtual bool		MessageReceived(BMessage* msg);
 		virtual const char*	Supports();
 
+		// True when the editor's controls are placed by a layout (the panel
+		// then gives them one), false when they are placed by hand.
+		virtual bool		UsesLayout() const;
+
 		BWindow* Window();
 
 		BMessenger&	Messenger();
@@ -49,6 +53,9 @@ class BViewEditor
 	protected:
 
 		int	Bottom();
+		// The width of the labels of the text fields, wide enough for the
+		// longest so none is cut short and the fields line up.
+		static float LabelDivider();
 		void AddControl(BView* control);
 		BView* Parent();
 		BView* Target();

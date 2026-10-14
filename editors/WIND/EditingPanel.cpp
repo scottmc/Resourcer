@@ -10,6 +10,8 @@
 // System Includes -------------------------------------------------------------
 #include <interface/Box.h>
 #include <interface/Button.h>
+#include <interface/GroupLayout.h>
+#include <interface/SpaceLayoutItem.h>
 #include <interface/ColorControl.h>
 #include <interface/MenuBar.h>
 #include <interface/MenuField.h>
@@ -113,6 +115,13 @@ void EditingPanel::SetTo(BMessage* active)
 	{
 		RemoveChild(dead);
 	}
+	// An editor that is placed by a layout gets a new one each time, the
+	// others place their controls by hand, so the panel starts without one.
+	// (Taking the layout away also takes the glue that was added at the end.)
+	if (GetLayout() != NULL)
+	{
+		SetLayout(NULL);
+	}
 
 	BView* view = NULL;
 	if (active)
@@ -129,9 +138,20 @@ void EditingPanel::SetTo(BMessage* active)
 					if (i != fEditorMap.end())
 					{
 						fCurrentEditor = i->second;
+						if (fCurrentEditor->UsesLayout())
+						{
+							BGroupLayout* group = new BGroupLayout(B_VERTICAL, 4);
+							SetLayout(group);
+							group->SetInsets(10, 10, 10, 10);
+						}
 						fCurrentEditor->SetParent(this);
 						fCurrentEditor->SetTarget(view);
 						fCurrentEditor->SetTo(&ctrl);
+						if (GetLayout() != NULL)
+						{
+							// keeps the controls together at the top
+							GetLayout()->AddItem(BSpaceLayoutItem::CreateGlue());
+						}
 					}
 				}
 			}

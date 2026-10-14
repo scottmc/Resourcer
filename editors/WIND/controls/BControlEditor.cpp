@@ -119,7 +119,7 @@ void BControlEditor::Init()
 		fLabelText = new BTextControl(BRect(10, bottom, 190, bottom + 20),
 									  "label", "Label: ", "",
 									  new BMessage(MSG_CONTROL_SET_LABEL));
-		fLabelText->SetDivider(be_plain_font->StringWidth("Label: "));
+		fLabelText->SetDivider(LabelDivider());
 		AddControl(fLabelText);
 	}
 
@@ -130,7 +130,7 @@ void BControlEditor::Init()
 									"Message: ", "",
 									new BMessage(MSG_CONTROL_SET_MSG));
 		fMsgText->TextView()->SetMaxBytes(4);
-		fMsgText->SetDivider(be_plain_font->StringWidth("Message: "));
+		fMsgText->SetDivider(LabelDivider());
 		AddControl(fMsgText);
 	}
 

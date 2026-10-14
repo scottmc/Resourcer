@@ -28,11 +28,16 @@ class EditingControl : public BView
 		void KeyDown(const char *bytes,int32 numBytes);
 		void Pulse(void);
 		void MouseDown(BPoint point);
+		void Deselect(void);
 
 		BRect edge;
 		BView *controlled;
 		bool alreadyDrawing;
 		bool notInit;
+
+	private:
+		bool IsTopView(BView *view);
+		void PutControlledBack(void);
 };
 //------------------------------------------------------------------------------
 

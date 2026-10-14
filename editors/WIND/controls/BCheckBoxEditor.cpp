@@ -65,6 +65,11 @@ const char* BCheckBoxEditor::Supports()
 	return "BCheckBox";
 }
 //------------------------------------------------------------------------------
+bool BCheckBoxEditor::UsesLayout() const
+{
+	return true;
+}
+//------------------------------------------------------------------------------
 void BCheckBoxEditor::Init()
 {
 	if (!fChecked)

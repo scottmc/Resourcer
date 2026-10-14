@@ -93,12 +93,96 @@ void EditingControl::KeyDown(const char *bytes,int32 numBytes)
 	}
 }
 //------------------------------------------------------------------------------
+// True for the window's own top view.  Parent() is no help here, because it
+// is NULL for every view that sits directly in the window too, so look for
+// the view among the window's children instead: the top view is the only
+// view without a parent that is not one of them.
+bool EditingControl::IsTopView(BView *view)
+{
+	if (view->Parent() != NULL)
+		return false;
+	BWindow *window = view->Window();
+	if (window == NULL)
+		return false;
+	for (int32 i = 0; i < window->CountChildren(); i++) {
+		if (window->ChildAt(i) == view)
+			return false;
+	}
+	return true;
+}
+//------------------------------------------------------------------------------
+// Takes the controlled view back out from beside the handle and puts it into
+// the view it lies in (a box, or the window).  The handle has to be out of the
+// way first, or it is the view found at that place.
+void EditingControl::PutControlledBack(void)
+{
+	// controlled may have been left without a window by an earlier
+	// reparenting; put it back so the conversions below are valid.
+	if (controlled != NULL && controlled->Window() == NULL) {
+		// It may still hang off a parent that is itself detached, in which
+		// case AddChild would refuse it, so take it off that parent first.
+		controlled->RemoveSelf();
+		Window()->AddChild(controlled);
+		if (controlled->Window() == NULL)
+			controlled = NULL;
+	}
+	if (controlled != NULL) {
+		BRect empty = controlled->ConvertToScreen(controlled->Bounds());
+		empty = Window()->ConvertFromScreen(empty);
+		BPoint empt = empty.LeftTop();
+		empt.x -= 1;empt.y -= 1;
+		BView *posparent = Window()->FindView(empt);
+		if (posparent != NULL) {
+			// Menus and pop-up menu fields cannot hold child views; adding
+			// to them silently fails and leaves the view without a window.
+			bool ismenu = is_kind_of(posparent,BMenu) || is_kind_of(posparent,BMenuField) ||
+				is_kind_of(posparent->Parent(),BMenuField);
+			if (!ismenu && posparent->ConvertToScreen(posparent->Bounds()).Contains(controlled->ConvertToScreen(controlled->Bounds()))) {
+				BRect wait = controlled->ConvertToScreen(controlled->Bounds());
+				wait = posparent->ConvertFromScreen(wait);
+				controlled->RemoveSelf();
+				controlled->MoveTo(wait.LeftTop());
+				posparent->AddChild(controlled);
+				if (controlled->Window() == NULL) {
+					controlled->RemoveSelf();
+					Window()->AddChild(controlled);
+				}
+			}
+		}
+	}
+}
+//------------------------------------------------------------------------------
+// Lets go of the selection, leaving the controlled view where it is.
+void EditingControl::Deselect(void)
+{
+	if (controlled == NULL)
+		return;
+
+	MoveTo(0,0);
+	ResizeTo(1,1);
+	PutControlledBack();
+	if (controlled != NULL)
+		controlled->SetViewColor(controlled->ViewColor());
+	controlled = NULL;
+	notInit = true;
+	editpanel->SetTo(NULL);
+	Invalidate(Bounds());
+}
+//------------------------------------------------------------------------------
 void EditingControl::Pulse(void)
 {
 	if (Window() != NULL) {
 	if ((Window()->CurrentFocus() != controlled) && (Window()->CurrentFocus() != this)) {
 		BView *cur = Window()->CurrentFocus();
 		if (cur == NULL) {
+			return;
+		}
+		if (IsTopView(cur)) {
+			// A click on the bare window gives the focus to the window's own top
+			// view.  That is nothing to edit (and taking it out of the window,
+			// as is done with the views below, detaches every view in it), so
+			// just let go of the selection.
+			Deselect();
 			return;
 		}
 		if (is_kind_of(cur,BTextView)) {
@@ -138,40 +222,7 @@ void EditingControl::Pulse(void)
 		edge.bottom += 10;
 		edge.right += 10;
 		ResizeTo(edge.right,edge.bottom);
-		// controlled may have been left without a window by an earlier
-		// reparenting; put it back so the conversions below are valid.
-		if (controlled != NULL && controlled->Window() == NULL) {
-			// It may still hang off a parent that is itself detached, in which
-			// case AddChild would refuse it, so take it off that parent first.
-			controlled->RemoveSelf();
-			Window()->AddChild(controlled);
-			if (controlled->Window() == NULL)
-				controlled = NULL;
-		}
-		if (controlled != NULL) {
-			BRect empty = controlled->ConvertToScreen(controlled->Bounds());
-			empty = Window()->ConvertFromScreen(empty);
-			BPoint empt = empty.LeftTop();
-			empt.x -= 1;empt.y -= 1;
-			BView *posparent = Window()->FindView(empt);
-			if (posparent != NULL) {
-				// Menus and pop-up menu fields cannot hold child views; adding
-				// to them silently fails and leaves the view without a window.
-				bool ismenu = is_kind_of(posparent,BMenu) || is_kind_of(posparent,BMenuField) ||
-					is_kind_of(posparent->Parent(),BMenuField);
-				if (!ismenu && posparent->ConvertToScreen(posparent->Bounds()).Contains(controlled->ConvertToScreen(controlled->Bounds()))) {
-					BRect wait = controlled->ConvertToScreen(controlled->Bounds());
-					wait = posparent->ConvertFromScreen(wait);
-					controlled->RemoveSelf();
-					controlled->MoveTo(wait.LeftTop());
-					posparent->AddChild(controlled);
-					if (controlled->Window() == NULL) {
-						controlled->RemoveSelf();
-						Window()->AddChild(controlled);
-					}
-				}
-			}
-		}
+		PutControlledBack();
 		if (controlled != NULL)
 			//controlled->Invalidate(controlled->Bounds());
 			controlled->SetViewColor(controlled->ViewColor());

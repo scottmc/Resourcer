@@ -9,6 +9,7 @@
 
 // Standard Includes -----------------------------------------------------------
 #include <algorithm>
+#include <math.h>
 
 // System Includes -------------------------------------------------------------
 #include <interface/StringView.h>
@@ -97,6 +98,24 @@ const char* BViewEditor::Supports()
 	return "BView";
 }
 //------------------------------------------------------------------------------
+bool BViewEditor::UsesLayout() const
+{
+	return false;
+}
+//------------------------------------------------------------------------------
+float BViewEditor::LabelDivider()
+{
+	float widest = be_plain_font->StringWidth("View Name: ");
+	float other = be_plain_font->StringWidth("Message: ");
+	if (other > widest)
+		widest = other;
+	other = be_plain_font->StringWidth("Label: ");
+	if (other > widest)
+		widest = other;
+	// a label is cut short when it fills the whole divider
+	return ceilf(widest) + 10;
+}
+//------------------------------------------------------------------------------
 BWindow* BViewEditor::Window()
 {
 	if (Target())
@@ -151,7 +170,7 @@ void BViewEditor::Init()
 		fViewName = new BTextControl(BRect(10, bottom, 190, bottom + 20),
 									 "name", "View Name: ", "",
 									 new BMessage(MSG_VIEW_SET_NAME));
-		fViewName->SetDivider(be_plain_font->StringWidth("View Name: "));
+		fViewName->SetDivider(LabelDivider());
 		AddControl(fViewName);
 	}
 }

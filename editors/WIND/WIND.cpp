@@ -285,8 +285,11 @@ void loaddata(unsigned char* data,size_t length, BView* bkgview)
 	mainwin = bkgview->Window();
 
 	//-------------Init Focus View & Window Options------
+	// (Not B_WILL_ACCEPT_FIRST_CLICK: the window server then never activates
+	// this window when it is clicked, so its text fields could not be typed
+	// into and the window being edited kept the focus.)
 	bkgview->Window()->SetFlags(B_NOT_H_RESIZABLE | B_NOT_ZOOMABLE |
-								B_NOT_MINIMIZABLE | B_WILL_ACCEPT_FIRST_CLICK);
+								B_NOT_MINIMIZABLE);
 	bkgview->Window()->SetLook(B_FLOATING_WINDOW_LOOK);
 
 	//-------------Size the window for the widest text-----
