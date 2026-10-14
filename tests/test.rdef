@@ -141,3 +141,10 @@ resource(41, "bitmap") (#'bits')
 	$"00FCC8FF24FCC8FF48FCC8FF6CFCC8FF90FCC8FFB4FCC8FFD8FCC8FFFCFCC8FF";
 resource(42, "raw") (#'RAWT') $"5261772062797465732077697468206E6F20656469746F72206F662074686569"
 	$"72206F776E2E00010203FEFF7F8020656E64";
+
+// Network addresses: a socket address as BNetworkAddress flattens it (length,
+// family, port and address in network order, the rest zero).
+// 192.168.1.10 port 8080
+resource(43, "ipv4_address") (#'NWAD') $"2001" $"1F90" $"C0A8010A" $"000000000000000000000000000000000000000000000000";
+// 2001:db8::1 port 443
+resource(44, "ipv6_address") (#'NWAD') $"1C05" $"01BB" $"00000000" $"20010DB8000000000000000000000001" $"00000000";
