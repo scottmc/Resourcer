@@ -26,6 +26,7 @@ class BButtonEditor : public BControlEditor
 		~BButtonEditor() {;}
 
 		virtual const char*	Supports();
+		virtual bool		UsesLayout() const;
 };
 
 #endif	// BBUTTONEDITOR_H

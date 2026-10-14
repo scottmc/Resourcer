@@ -92,6 +92,11 @@ const char* BStringViewEditor::Supports()
 	return "BStringView";
 }
 //------------------------------------------------------------------------------
+bool BStringViewEditor::UsesLayout() const
+{
+	return true;
+}
+//------------------------------------------------------------------------------
 void BStringViewEditor::Init()
 {
 	int bottom = Bottom();
@@ -100,7 +105,7 @@ void BStringViewEditor::Init()
 		fLabelText = new BTextControl(BRect(10, bottom, 190, bottom + 20),
 									  "label", "Label: ", "",
 									  new BMessage(MSG_STRING_VIEW_SET_TEXT));
-		fLabelText->SetDivider(be_plain_font->StringWidth("Label: "));
+		fLabelText->SetDivider(LabelDivider());
 		AddControl(fLabelText);
 	}
 

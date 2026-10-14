@@ -985,6 +985,9 @@ void DoubleItem::Invoke(bool generic) {
 	BPath path(&dir,super->EditorName());					//--editors/typecode, the path of our editor
 	plug_in plugin;										//--handy little struct, holds useful information, the def is in preamble.h
 	plugin.win = x;                                     //-Set it up
+	plugin.loaddata = NULL;                             //-An editor may leave out functions, so a missing one has to be NULL
+	plugin.savedata = NULL;
+	plugin.messaging = NULL;
 	entry.SetTo(path.Path());
 	BEntry entry2(&dir,"unknown");                      //-The hex editor
 	if ((entry.Exists() == false) || (genoverride == true)) { //-Do we not have an editor or do we want to use the hex editor?

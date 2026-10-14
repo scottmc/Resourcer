@@ -100,6 +100,15 @@ void EditingPanel::MessageReceived(BMessage *msg)
 		}
 	}
 
+	// The editors' controls send negative messages here.  When there is no
+	// editor (the selection was let go while a field was still being edited)
+	// or it did not take one, there is nothing to do: passed on, it would
+	// travel up to the window being edited, which is not expecting it.
+	if ((int32)msg->what < 0)
+	{
+		return;
+	}
+
 	switch(msg->what)
 	{
 		default:

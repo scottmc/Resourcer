@@ -399,6 +399,15 @@ void loaddata(unsigned char* data,size_t length, BView* bkgview)
 }
 	
 	
+// The window editor's own controls send their messages to the Focus View panel
+// and the windows it edits, so none reach the editor window.  The function is
+// exported and has to exist, though: without it Resourcer is left with no
+// pointer to call, and crashes on the first message that reaches it.
+void messaging(BMessage* message, BView* bkgview)
+{
+}
+
+
 unsigned char* savedata(size_t* length, BView* bkgview)
 {
 	BMessage *archive = new BMessage;

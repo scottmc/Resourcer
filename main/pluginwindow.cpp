@@ -37,7 +37,8 @@ pluginwindow::QuitRequested(void) {
 	Hide();
 	*registration = NULL;
 	bool changes = true;
-	data = (*(plugin.savedata))(&give,gray);
+	give = 0;
+	data = (plugin.savedata != NULL) ? (*(plugin.savedata))(&give,gray) : NULL;
 	if (data == NULL) {
 		BAlert *alert = new BAlert("whoops","The resource could not be written because the editor passed a NULL pointer (i.e. it didn't write any data).","OK",NULL,NULL,B_WIDTH_AS_USUAL,B_STOP_ALERT);
 		alert->Go(NULL);
@@ -95,7 +96,9 @@ pluginwindow::MessageReceived(BMessage *message) {
 	//	B_SIMPLE_DATA when files are dropped on them, and 'ICNE' when Icon-O-Matic
 	//	saves an icon the VICN editor asked it to edit.
 	if ((y < 0) || (y == B_REFS_RECEIVED) || (y == B_SIMPLE_DATA) || (y == 'ICNE')) {
-		(*(plugin.messaging))(message,gray);
+		//	an editor does not have to take messages
+		if (plugin.messaging != NULL)
+			(*(plugin.messaging))(message,gray);
 	} else {
 		BWindow::MessageReceived(message);
 	}
