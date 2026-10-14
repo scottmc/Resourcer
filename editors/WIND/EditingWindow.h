@@ -26,11 +26,17 @@ class DropFilter;
 class EditingControl;
 
 //------------------------------------------------------------------------------
+// Works around a Haiku double free when deleting an unarchived BMenuField;
+// call on a view (and its children) before deleting it.
+class BView;
+void RepairMenuFields(BView* view);
+
 class EditingWindow : public BWindow
 {
 	public:
 		EditingWindow(void);
 		EditingWindow(BMessage *archive);
+		~EditingWindow();
 
 		status_t Archive(BMessage* archive, bool deep = true) const;
 		void MessageReceived(BMessage* msg);

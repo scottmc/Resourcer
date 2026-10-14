@@ -21,6 +21,7 @@
 
 // Local Includes --------------------------------------------------------------
 #include "EditingControl.h"
+#include "EditingWindow.h"
 
 // TODO: create a real solution for this
 #include "EditingPanel.h"
@@ -81,6 +82,7 @@ void EditingControl::KeyDown(const char *bytes,int32 numBytes)
 		{
 			// TODO: add message for removing menubar
 		}
+		RepairMenuFields(controlled);
 		delete controlled;
 		controlled = NULL;
 		notInit = true;

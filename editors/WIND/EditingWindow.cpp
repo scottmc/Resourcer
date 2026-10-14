@@ -8,6 +8,7 @@
 // System Includes -------------------------------------------------------------
 #include <app/Message.h>
 #include <interface/MenuBar.h>
+#include <interface/MenuField.h>
 #include <interface/MenuItem.h>
 
 // Project Includes ------------------------------------------------------------
@@ -34,6 +35,42 @@ EditingWindow::EditingWindow(BMessage* archive)
 	:	BWindow(archive)
 {
 	Init();
+}
+//------------------------------------------------------------------------------
+// Haiku bug workaround.  A BMenuField created from an archive ends up with two
+// items in its menu bar that share the same pop-up menu (the archived one and
+// a copy BMenuField adds itself), so deleting the field deletes that menu
+// twice and crashes with a double free.  Take the extra items out of the bar
+// (leaving them allocated) before the field goes away.
+void RepairMenuFields(BView* view)
+{
+	BMenuField* field = dynamic_cast<BMenuField*>(view);
+	if (field != NULL)
+	{
+		BMenuBar* bar = field->MenuBar();
+		if (bar != NULL && bar->CountItems() > 1)
+		{
+			BMenuItem* first = bar->ItemAt(0);
+			for (int32 i = bar->CountItems() - 1; i > 0; --i)
+			{
+				BMenuItem* item = bar->ItemAt(i);
+				if (first != NULL && item != NULL && item->Submenu() != NULL &&
+					item->Submenu() == first->Submenu())
+				{
+					bar->RemoveItem(i);
+				}
+			}
+		}
+	}
+
+	for (int32 i = 0; i < view->CountChildren(); ++i)
+		RepairMenuFields(view->ChildAt(i));
+}
+//------------------------------------------------------------------------------
+EditingWindow::~EditingWindow()
+{
+	for (int32 i = 0; i < CountChildren(); ++i)
+		RepairMenuFields(ChildAt(i));
 }
 //------------------------------------------------------------------------------
 status_t EditingWindow::Archive(BMessage* archive, bool deep) const
