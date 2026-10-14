@@ -46,7 +46,7 @@ and an ASCII view of the data.
 | Other values | `BOOL` `CHAR` `FLOT` `DBLE`, `PNTR` and `OPTR` pointers (shown, not edited) |
 | Text | `CSTR` text string, `TEXT` ASCII text, `MIME` and `MIMS` MIME types, `STRL` string list (one string per line) |
 | Geometry and color | `BPNT` point, `RECT` rectangle, `SIZE`, `ALGN` alignment, `AMTX` affine transform, `PATN` pattern, `RGBC` color |
-| References | `RREF` entry reference, `NREF` node reference, `MSNG` messenger, `NWAD` network address (read only) |
+| References | `RREF` entry reference, `NREF` node reference, `MSNG` messenger, `NWAD` network address (IPv4 and IPv6 can be edited) |
 | Applications | `APPF` application flags, `APPV` application version, `SCTD` scripting property info (read only) |
 | Messages and catalogs | `MSGG` archived BMessage, `CADA` locale catalog (read only) |
 | Icons and bitmaps | `ICON` 32x32 and `MICN` 16x16 icons, `VICN` vector icon (HVIF), `CURS` cursor, `bits` bitmap, `BBMP` archived bitmap (read only), `CLRB` `GRYB` `MNOB` `RGBB` raw pixels (read only, you give the width) |
