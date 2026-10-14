@@ -135,7 +135,7 @@ class InterfaceItem : public BStringItem
 class InterfaceListView : public BOutlineListView
 {
 	public:
-		InterfaceListView(float width) : BOutlineListView(BRect(20,20,width - 20 - B_V_SCROLL_BAR_WIDTH,200),"elements") {}
+		InterfaceListView(float width) : BOutlineListView(BRect(20,20,width - 20 - B_V_SCROLL_BAR_WIDTH,200),"elements",B_SINGLE_SELECTION_LIST,B_FOLLOW_ALL_SIDES) {}
 		bool InitiateDrag(BPoint /*point*/, int32 index, bool /*wasSelected*/)
 		{
 			if (ItemAt(index)->OutlineLevel() != 1)
@@ -227,12 +227,14 @@ class ElementsPanel : public BView
 			fInstruction = instruction;
 			AddChild(fList);
 			AddChild(fInstruction);
-			PlaceViews();
+			// No PlaceViews() yet: resizing a scroll view that is not on screen
+			// leaves its list and scroll bar behind at the old size (their
+			// follow modes only work once attached), so wait for AllAttached().
 		}
 
-		void AttachedToWindow()
+		void AllAttached()
 		{
-			BView::AttachedToWindow();
+			BView::AllAttached();
 			PlaceViews();
 		}
 
@@ -301,16 +303,22 @@ void loaddata(unsigned char* data,size_t length, BView* bkgview)
 	float width = ceilf(need);
 	if (width < 250)
 		width = 250;
-	float height = 350;
-	if (fontheight * 17 > height)
-		height = ceilf(fontheight * 17);
 
 	// A heading names the card, the cards fill the middle and a horizontal
 	// scroll bar along the bottom flips between them.
 	float headingheight = fontheight + 10;
 	float barheight = B_H_SCROLL_BAR_HEIGHT;
+
+	// Smallest height that still shows the title, look and behavior fields,
+	// the flags box heading and six flag rows.  Everything scales with the
+	// plain font size, so it also fits at small and large fonts.
+	float fieldrow = fontheight + 14 + 8;
+	float flagrow = fontheight + 8;
+	float height = ceilf(headingheight + 10 + 3 * fieldrow + (fontheight + 6)
+		+ 6 * flagrow + 12 + barheight + 10);
 	float panelwidth = width;
 	float panelheight = height - headingheight - barheight;
+	bkgview->Window()->SetSizeLimits(width,width,height,32767);
 	bkgview->Window()->ResizeTo(width,height);
 
 	static const char *cardtitles[3] = { "Focus View", "Window", "Elements" };
