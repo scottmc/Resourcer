@@ -172,6 +172,16 @@ void EditingWindow::MessageReceived(BMessage *msg)
 				reply.AddPointer("archive", archive);
 				msg->SendReply(&reply);
 			}
+			else
+			{
+				// The sender waits for a reply, so don't leave it hanging
+				BMessage reply;
+				reply.AddInt32("err", B_BAD_VALUE);
+				msg->SendReply(&reply);
+			}
+			// No fall through to the quit below: the window is asked to quit
+			// (and waited for) by ~WindowEditor, not by saving.
+			break;
 		}
 
 		case MSG_WINDOW_QUIT:
