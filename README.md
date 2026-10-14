@@ -1,7 +1,7 @@
 # Resourcer
 ![Screenshot of Resourcer](resourcer.png)
 
-Resourcer is an open-source resource editor for the BeOS. It contains editors for 61 data types, including windows (for building app interfaces), cursors, images, sounds, movies, icons, and text. It is distributed under the BSD license. You get the source and the latest stable binaries from the downloads page. Please help out if can; Resourcer can not improve without your help.
+Resourcer is an open-source resource editor for the BeOS. It contains editors for 63 data types, including windows (for building app interfaces), cursors, images, sounds, movies, icons, and text. It is distributed under the BSD license. You get the source and the latest stable binaries from the downloads page. Please help out if can; Resourcer can not improve without your help.
 ### News:
 
 Resourcer released under the BSD license.
@@ -43,7 +43,7 @@ and an ASCII view of the data.
 | Kind | Types |
 |---|---|
 | Whole numbers | `BYTE` `UBYT` `SHRT` `USHT` `LONG` `ULNG` `LLNG` `ULLG` `SIZT` `SSZT` `OFFT` `TIME` |
-| Other values | `BOOL` `CHAR` `FLOT` `DBLE` |
+| Other values | `BOOL` `CHAR` `FLOT` `DBLE`, `PNTR` and `OPTR` pointers (shown, not edited) |
 | Text | `CSTR` text string, `TEXT` ASCII text, `MIME` and `MIMS` MIME types, `STRL` string list (one string per line) |
 | Geometry and color | `BPNT` point, `RECT` rectangle, `SIZE`, `ALGN` alignment, `AMTX` affine transform, `PATN` pattern, `RGBC` color |
 | References | `RREF` entry reference, `NREF` node reference, `MSNG` messenger |
