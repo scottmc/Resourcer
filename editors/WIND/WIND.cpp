@@ -4,6 +4,7 @@
 //------------------------------------------------------------------------------
 
 // Standard Includes -----------------------------------------------------------
+#include <math.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -16,7 +17,7 @@
 #include <interface/Bitmap.h>
 #include <interface/Box.h>
 #include <interface/Button.h>
-#include <interface/ControlLook.h>
+#include <interface/CardLayout.h>
 #include <interface/CheckBox.h>
 #include <interface/ColorControl.h>
 #include <interface/ListItem.h>
@@ -26,9 +27,9 @@
 #include <interface/OutlineListView.h>
 #include <interface/PopUpMenu.h>
 #include <interface/RadioButton.h>
-#include <interface/TabView.h>
 #include <interface/TextControl.h>
 #include <interface/Screen.h>
+#include <interface/ScrollBar.h>
 #include <interface/ScrollView.h>
 #include <interface/Slider.h>
 #include <interface/StringView.h>
@@ -162,6 +163,112 @@ int32 track_over(void *view) {
 	return B_OK;
 }
 
+// A horizontal scroll bar that flips through the cards of a BCardLayout: its
+// value is the index of the visible card (0 to 2).  The heading above the
+// cards is kept in step.
+class CardScrollBar : public BScrollBar
+{
+	public:
+		CardScrollBar(BRect frame, BCardLayout *layout, BStringView *heading,
+					  const char **titles, int32 count)
+			:	BScrollBar(frame, "cardscroller", NULL, 0, count - 1, B_HORIZONTAL),
+				fLayout(layout),
+				fHeading(heading),
+				fTitles(titles)
+		{
+			SetSteps(1, 1);
+			SetProportion(1.0f / count);
+			ShowCard(0);
+		}
+
+		void ValueChanged(float value)
+		{
+			BScrollBar::ValueChanged(value);
+			int32 index = (int32)floorf(value + 0.5f);
+			if (value != (float)index)
+			{
+				// snap the thumb to a whole card
+				SetValue(index);
+				return;
+			}
+			ShowCard(index);
+		}
+
+	private:
+		void ShowCard(int32 index)
+		{
+			fLayout->SetVisibleItem(index);
+			fHeading->SetText(fTitles[index]);
+		}
+
+		BCardLayout	*fLayout;
+		BStringView	*fHeading;
+		const char	**fTitles;
+};
+
+// The Elements card.  The list and the instruction text are placed from the
+// panel's own size whenever it changes, instead of relying on follow modes:
+// the card layout and the window resize the panel after it is built, and
+// follow modes then stretch the list over the instruction text.
+class ElementsPanel : public BView
+{
+	public:
+		ElementsPanel(BRect frame)
+			:	BView(frame, "viewtoolbar", B_FOLLOW_ALL_SIDES, B_FRAME_EVENTS),
+				fList(NULL),
+				fInstruction(NULL)
+		{
+			SetViewColor(216,216,216);
+		}
+
+		void SetContent(BView *list, BStringView *instruction)
+		{
+			fList = list;
+			fInstruction = instruction;
+			AddChild(fList);
+			AddChild(fInstruction);
+			PlaceViews();
+		}
+
+		void AttachedToWindow()
+		{
+			BView::AttachedToWindow();
+			PlaceViews();
+		}
+
+		void FrameResized(float width, float height)
+		{
+			BView::FrameResized(width, height);
+			PlaceViews();
+		}
+
+	private:
+		void PlaceViews()
+		{
+			if (fList == NULL || fInstruction == NULL)
+				return;
+
+			const float padding = 20;
+			BRect bounds = Bounds();
+			float textheight = fInstruction->Frame().Height();
+			float textwidth = fInstruction->Frame().Width();
+
+			// instruction text along the bottom, centred
+			float texttop = bounds.bottom - padding / 2 - textheight;
+			fInstruction->MoveTo(floorf((bounds.Width() - textwidth) / 2), texttop);
+
+			// list fills the rest with the same padding on both sides
+			float listheight = texttop - padding / 2 - padding;
+			if (listheight < 40)
+				listheight = 40;
+			fList->MoveTo(padding, padding);
+			fList->ResizeTo(bounds.Width() - 2 * padding, listheight);
+		}
+
+		BView		*fList;
+		BStringView	*fInstruction;
+};
+
 BCheckBox *menubox;
 EditingPanel *editpanel;
 
@@ -188,44 +295,37 @@ void loaddata(unsigned char* data,size_t length, BView* bkgview)
 	float fontheight = ceilf(fh.ascent + fh.descent);
 	const char *instruction = "Drag a List Item to the Window to Add It";
 	float instructionwidth = be_plain_font->StringWidth(instruction);
-	// BTabView does not resize the tab views, so measure what it leaves for
-	// them: a throwaway tab view shows the border around its container.
-	BTabView *probe = new BTabView(BRect(0,0,300,300),"probe",B_WIDTH_FROM_WIDEST);
-	float borderwidth = 300 - probe->ContainerView()->Bounds().Width();
-	delete probe;
-
 	float need = WindowEditor::PreferredWidth();
 	if (instructionwidth + 40 > need)
 		need = instructionwidth + 40;
-	float width = need + borderwidth;
-	// BTabView with B_WIDTH_FROM_WIDEST makes every tab as wide as the widest
-	// label plus padding (see BTabView::TabFrame).
-	float tabpad = ceilf(be_control_look->DefaultLabelSpacing() * 3.3f);
-	float tabwidest = be_plain_font->StringWidth("Focus View");
-	if (be_plain_font->StringWidth("Window") > tabwidest)
-		tabwidest = be_plain_font->StringWidth("Window");
-	if (be_plain_font->StringWidth("Elements") > tabwidest)
-		tabwidest = be_plain_font->StringWidth("Elements");
-	float tabstrip = 2 * be_control_look->ComposeSpacing(B_USE_WINDOW_SPACING)
-		+ 3 * (tabwidest + tabpad);
-	if (tabstrip > width)
-		width = tabstrip;
-	width = ceilf(width);
+	float width = ceilf(need);
 	if (width < 250)
 		width = 250;
 	float height = 350;
 	if (fontheight * 17 > height)
 		height = ceilf(fontheight * 17);
 
+	// A heading names the card, the cards fill the middle and a horizontal
+	// scroll bar along the bottom flips between them.
+	float headingheight = fontheight + 10;
+	float barheight = B_H_SCROLL_BAR_HEIGHT;
+	float panelwidth = width;
+	float panelheight = height - headingheight - barheight;
 	bkgview->Window()->ResizeTo(width,height);
-	BTabView *tabs = new BTabView(BRect(0,0,width,height),"tabs",B_WIDTH_FROM_WIDEST);
-	// The tab views are made as big as the container the tab view gives them
-	BRect panel = tabs->ContainerView()->Bounds();
-	float panelwidth = panel.Width();
-	float panelheight = panel.Height();
+
+	static const char *cardtitles[3] = { "Focus View", "Window", "Elements" };
+	BStringView *heading = new BStringView(BRect(0,0,width,headingheight - 1),"cardtitle",cardtitles[0],B_FOLLOW_LEFT_RIGHT | B_FOLLOW_TOP);
+	heading->SetViewColor(216,216,216);
+	heading->SetFont(be_bold_font);
+	heading->SetAlignment(B_ALIGN_CENTER);
+	BView *cards = new BView(BRect(0,headingheight,width,headingheight + panelheight),"cards",B_FOLLOW_ALL_SIDES,B_WILL_DRAW);
+	cards->SetViewColor(216,216,216);
+	BCardLayout *cardlayout = new BCardLayout();
+	cards->SetLayout(cardlayout);
+
 	editpanel = new EditingPanel;
-	tabs->AddTab(editpanel);
-	tabs->TabAt(0)->SetLabel("Focus View");
+	editpanel->ResizeTo(panelwidth,panelheight);
+	cardlayout->AddView(editpanel);
 
 	//-------------Init Editable Window------------------
 	if (length == 0)
@@ -238,13 +338,12 @@ void loaddata(unsigned char* data,size_t length, BView* bkgview)
 		wineditor = new WindowEditor(BRect(0, 0, panelwidth, panelheight), "wineditpanel",
 									 mainwin, editpanel, data);
 	}
-	tabs->AddTab(wineditor);
-	tabs->TabAt(1)->SetLabel("Window");
+	cardlayout->AddView(wineditor);
 
 	//-------------Init Toolbar---------------------------
-	BView *y = new BView(BRect(0,0,panelwidth,panelheight),"viewtoolbar",B_FOLLOW_ALL_SIDES,0);
-	y->SetViewColor(216,216,216);
-	y->AddChild(new BStringView(BRect(20,210,20+instructionwidth,210+fontheight+2),"instructions",instruction,B_FOLLOW_TOP | B_FOLLOW_H_CENTER));
+	ElementsPanel *y = new ElementsPanel(BRect(0,0,panelwidth,panelheight));
+	BStringView *instructionview = new BStringView(BRect(0,0,instructionwidth,fontheight+2),"instructions",instruction);
+	instructionview->SetViewColor(216,216,216);
 	BOutlineListView *list = new InterfaceListView(panelwidth);
 	BStringItem *controls = new BStringItem("Controls");
 	BStringItem *visuals = new BStringItem("Visual Organizers");
@@ -277,50 +376,32 @@ void loaddata(unsigned char* data,size_t length, BView* bkgview)
 			tempy->SetDivider(be_plain_font->StringWidth(tempy->Label()));
 			list->AddUnder(new InterfaceItem("Text Field",tempy),editable);
 	// Same padding on both sides: 20 from the left and right edge.
-	BScrollView *scroller = new BScrollView("scroller",list,B_FOLLOW_ALL_SIDES,0,false,true);
-	scroller->MoveTo(20,20);
-	scroller->ResizeTo(panelwidth - 40,182);
-	y->AddChild(scroller);
-	tabs->AddTab(y);
-	tabs->TabAt(2)->SetLabel("Elements");
-	bkgview->AddChild(tabs);
+	BScrollView *scroller = new BScrollView("scroller",list,B_FOLLOW_LEFT | B_FOLLOW_TOP,0,false,true);
+	y->SetContent(scroller,instructionview);
+	cardlayout->AddView(y);
+
+	bkgview->AddChild(heading);
+	bkgview->AddChild(cards);
+	CardScrollBar *bar = new CardScrollBar(BRect(0,headingheight + panelheight,width,height),cardlayout,heading,cardtitles,3);
+	bar->SetResizingMode(B_FOLLOW_LEFT_RIGHT | B_FOLLOW_BOTTOM);
+	bkgview->AddChild(bar);
 }
 	
 	
 unsigned char* savedata(size_t* length, BView* bkgview)
 {
 	BMessage *archive = new BMessage;
-	BTabView* Tabs = dynamic_cast<BTabView*>(bkgview->FindView("tabs"));
-	if (!Tabs)
-	{
-		// Without the tabs, we're basically up a creek
-		debugger("No tabview found");
-	}
-	// Because of the massive lameness of BTabView, we have to do
-	// a bait and switch if the "Window" is not the currently
-	// selected tab.  There is the remote possibility that the user
-	// will select another tab while we're saving, but we'll hope
-	// that's negligible
-	WindowEditor* WinEditor = dynamic_cast<WindowEditor*>(Tabs->TabAt(1)->View());
+	// All three cards stay attached to the window (the card layout only hides
+	// the ones not showing), so the editor can be asked to archive directly.
+	WindowEditor* WinEditor = dynamic_cast<WindowEditor*>(bkgview->FindView("wineditpanel"));
 	if (!WinEditor)
 	{
-		// Here again, without the window editor, we're in a bad way
+		// Without the window editor, we're basically up a creek
 		debugger("No window editor found");
-	}
-	bool detach = false;
-	if (!WinEditor->Parent())
-	{
-		detach = true;
-		WinEditor->Hide();
-		mainwin->AddChild(WinEditor);
 	}
 	if (WinEditor->ArchiveWindow(archive) != B_OK)
 	{
 		(new BAlert("yikes", "Archive is failing" B_UTF8_ELLIPSIS, "OK"))->Go();
-	}
-	if (detach)
-	{
-		WinEditor->RemoveSelf();
 	}
 	BMallocIO buffer;
 	ssize_t xyz;
