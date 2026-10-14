@@ -1,7 +1,7 @@
 # Resourcer
 ![Screenshot of Resourcer](resourcer.png)
 
-Resourcer is an open-source resource editor for the BeOS. It contains editors for 60 data types, including windows (for building app interfaces), cursors, images, sounds, movies, icons, and text. It is distributed under the BSD license. You get the source and the latest stable binaries from the downloads page. Please help out if can; Resourcer can not improve without your help.
+Resourcer is an open-source resource editor for the BeOS. It contains editors for 61 data types, including windows (for building app interfaces), cursors, images, sounds, movies, icons, and text. It is distributed under the BSD license. You get the source and the latest stable binaries from the downloads page. Please help out if can; Resourcer can not improve without your help.
 ### News:
 
 Resourcer released under the BSD license.
@@ -49,7 +49,7 @@ and an ASCII view of the data.
 | References | `RREF` entry reference, `NREF` node reference, `MSNG` messenger |
 | Applications | `APPF` application flags, `APPV` application version |
 | Messages and catalogs | `MSGG` archived BMessage, `CADA` locale catalog (read only) |
-| Icons and bitmaps | `ICON` 32x32 and `MICN` 16x16 icons, `VICN` vector icon (HVIF), `CURS` cursor, `bits` bitmap |
+| Icons and bitmaps | `ICON` 32x32 and `MICN` 16x16 icons, `VICN` vector icon (HVIF), `CURS` cursor, `bits` bitmap, `BBMP` archived bitmap (read only) |
 | Interface and media | `WIND` window layout, `MOOV` movie, `nois` sound |
 | Images | `GIF` `JPEG` `PNG` `PPM` `TGA` `BMP` `TIFF` `WebP` `PSD` `AVIF` `ICNS` `ICO` `PCX` `JP2` `SGI` `WBI` `RAWI` |
 
