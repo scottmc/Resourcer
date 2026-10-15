@@ -163,47 +163,100 @@ int32 track_over(void *view) {
 	return B_OK;
 }
 
-// A horizontal scroll bar that flips through the cards of a BCardLayout: its
-// value is the index of the visible card (0 to 2).  The heading above the
-// cards is kept in step.
-class CardScrollBar : public BScrollBar
+// The row of three buttons above the cards, one for each card, each a third of
+// the window width.  They switch the visible card, and the button of the card
+// showing is the window's default button, which draws it with a heavier border.
+class CardButtons : public BView
 {
 	public:
-		CardScrollBar(BRect frame, BCardLayout *layout, BStringView *heading,
-					  const char **titles, int32 count)
-			:	BScrollBar(frame, "cardscroller", NULL, 0, count - 1, B_HORIZONTAL),
+		CardButtons(BRect frame, BCardLayout *layout, const char **labels, int32 count)
+			:	BView(frame, "cardbuttons", B_FOLLOW_LEFT_RIGHT | B_FOLLOW_TOP, B_FRAME_EVENTS),
 				fLayout(layout),
-				fHeading(heading),
-				fTitles(titles)
+				fCount(count),
+				fCurrent(0)
 		{
-			SetSteps(1, 1);
-			SetProportion(1.0f / count);
-			ShowCard(0);
+			SetViewColor(216,216,216);
+			for (int32 i = 0; i < count && i < kMaxCards; i++)
+			{
+				BMessage *message = new BMessage(kShowCard);
+				message->AddInt32("card", i);
+				fButtons[i] = new BButton(BRect(0,0,10,10), labels[i], labels[i], message);
+				AddChild(fButtons[i]);
+			}
 		}
 
-		void ValueChanged(float value)
+		// The height the buttons ask for with the current font
+		static float PreferredHeight()
 		{
-			BScrollBar::ValueChanged(value);
-			int32 index = (int32)floorf(value + 0.5f);
-			if (value != (float)index)
-			{
-				// snap the thumb to a whole card
-				SetValue(index);
+			BButton probe(BRect(0,0,10,10), "probe", "Elements", NULL);
+			float width, height;
+			probe.GetPreferredSize(&width, &height);
+			return ceilf(height);
+		}
+
+		void AttachedToWindow()
+		{
+			BView::AttachedToWindow();
+			for (int32 i = 0; i < fCount && i < kMaxCards; i++)
+				fButtons[i]->SetTarget(this);
+			PlaceButtons();
+			ShowCard(fCurrent);
+		}
+
+		void FrameResized(float width, float height)
+		{
+			BView::FrameResized(width, height);
+			PlaceButtons();
+		}
+
+		void MessageReceived(BMessage *message)
+		{
+			int32 card;
+			if (message->what == kShowCard && message->FindInt32("card", &card) == B_OK)
+				ShowCard(card);
+			else
+				BView::MessageReceived(message);
+		}
+
+		void ShowCard(int32 index)
+		{
+			if (index < 0 || index >= fCount)
 				return;
+			fCurrent = index;
+			fLayout->SetVisibleItem(index);
+			if (Window() != NULL)
+			{
+				for (int32 i = 0; i < fCount && i < kMaxCards; i++)
+				{
+					if (i != index)
+						fButtons[i]->MakeDefault(false);
+				}
+				fButtons[index]->MakeDefault(true);
 			}
-			ShowCard(index);
 		}
 
 	private:
-		void ShowCard(int32 index)
+		static const int32 kMaxCards = 3;
+		static const uint32 kShowCard = 'card';
+
+		// Thirds of the width, the last one takes what is left over
+		void PlaceButtons()
 		{
-			fLayout->SetVisibleItem(index);
-			fHeading->SetText(fTitles[index]);
+			float width = Bounds().Width() + 1;
+			float height = Bounds().Height();
+			for (int32 i = 0; i < fCount && i < kMaxCards; i++)
+			{
+				float left = floorf(i * width / fCount);
+				float right = (i == fCount - 1) ? width : floorf((i + 1) * width / fCount);
+				fButtons[i]->MoveTo(left, 0);
+				fButtons[i]->ResizeTo(right - left - 1, height);
+			}
 		}
 
 		BCardLayout	*fLayout;
-		BStringView	*fHeading;
-		const char	**fTitles;
+		int32		fCount;
+		int32		fCurrent;
+		BButton		*fButtons[kMaxCards];
 };
 
 // The Elements card.  The list and the instruction text are placed from the
@@ -307,29 +360,25 @@ void loaddata(unsigned char* data,size_t length, BView* bkgview)
 	if (width < 250)
 		width = 250;
 
-	// A heading names the card, the cards fill the middle and a horizontal
-	// scroll bar along the bottom flips between them.
-	float headingheight = fontheight + 10;
-	float barheight = B_H_SCROLL_BAR_HEIGHT;
+	// A row of buttons along the top flips between the cards, which fill the
+	// rest of the window.
+	float buttonheight = CardButtons::PreferredHeight();
+	float gap = 4;
 
 	// Smallest height that still shows the title, look and behavior fields,
 	// the flags box heading and six flag rows.  Everything scales with the
 	// plain font size, so it also fits at small and large fonts.
 	float fieldrow = fontheight + 14 + 8;
 	float flagrow = fontheight + 8;
-	float height = ceilf(headingheight + 10 + 3 * fieldrow + (fontheight + 6)
-		+ 6 * flagrow + 12 + barheight + 10);
+	float panelheight = ceilf(10 + 3 * fieldrow + (fontheight + 6)
+		+ 6 * flagrow + 12 + 10);
+	float height = buttonheight + gap + panelheight;
 	float panelwidth = width;
-	float panelheight = height - headingheight - barheight;
 	bkgview->Window()->SetSizeLimits(width,width,height,32767);
 	bkgview->Window()->ResizeTo(width,height);
 
-	static const char *cardtitles[3] = { "Focus View", "Window", "Elements" };
-	BStringView *heading = new BStringView(BRect(0,0,width,headingheight - 1),"cardtitle",cardtitles[0],B_FOLLOW_LEFT_RIGHT | B_FOLLOW_TOP);
-	heading->SetViewColor(216,216,216);
-	heading->SetFont(be_bold_font);
-	heading->SetAlignment(B_ALIGN_CENTER);
-	BView *cards = new BView(BRect(0,headingheight,width,headingheight + panelheight),"cards",B_FOLLOW_ALL_SIDES,B_WILL_DRAW);
+	static const char *cardlabels[3] = { "Focus", "Window", "Elements" };
+	BView *cards = new BView(BRect(0,buttonheight + gap,width,buttonheight + gap + panelheight),"cards",B_FOLLOW_ALL_SIDES,B_WILL_DRAW);
 	cards->SetViewColor(216,216,216);
 	BCardLayout *cardlayout = new BCardLayout();
 	cards->SetLayout(cardlayout);
@@ -391,11 +440,10 @@ void loaddata(unsigned char* data,size_t length, BView* bkgview)
 	y->SetContent(scroller,instructionview);
 	cardlayout->AddView(y);
 
-	bkgview->AddChild(heading);
+	// Three buttons, one per card, across the top
+	CardButtons *buttons = new CardButtons(BRect(0,0,width,buttonheight - 1),cardlayout,cardlabels,3);
+	bkgview->AddChild(buttons);
 	bkgview->AddChild(cards);
-	CardScrollBar *bar = new CardScrollBar(BRect(0,headingheight + panelheight,width,height),cardlayout,heading,cardtitles,3);
-	bar->SetResizingMode(B_FOLLOW_LEFT_RIGHT | B_FOLLOW_BOTTOM);
-	bkgview->AddChild(bar);
 }
 	
 	
