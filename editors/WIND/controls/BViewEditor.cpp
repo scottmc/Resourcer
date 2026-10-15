@@ -35,10 +35,18 @@
 BViewEditor::ControlKeeper BViewEditor::fControlKeeper;
 
 //------------------------------------------------------------------------------
+// Two numbers typed as "20, 30" or "20 30"
+static bool ParsePair(const char* text, float* first, float* second)
+{
+	return sscanf(text, " %f , %f", first, second) == 2 ||
+		   sscanf(text, " %f %f", first, second) == 2;
+}
+//------------------------------------------------------------------------------
 BViewEditor::BViewEditor()
 	:	fClassName(NULL),
 		fViewName(NULL),
 		fPosition(NULL),
+		fSize(NULL),
 		fBottom(10)
 {
 }
@@ -87,16 +95,21 @@ void BViewEditor::SetTo(BMessage* archive)
 		char position[64];
 		sprintf(position, "%g, %g", frame.left, frame.top);
 		fPosition->SetText(position);
+		sprintf(position, "%g, %g", frame.Width(), frame.Height());
+		fSize->SetText(position);
 	}
 	else
 	{
 		fPosition->SetText("");
+		fSize->SetText("");
 	}
 	fPosition->SetTarget(Parent());
+	fSize->SetTarget(Parent());
 
 	Parent()->AddChild(fClassName);
 	Parent()->AddChild(fViewName);
 	Parent()->AddChild(fPosition);
+	Parent()->AddChild(fSize);
 }
 //------------------------------------------------------------------------------
 bool BViewEditor::MessageReceived(BMessage* msg)
@@ -112,9 +125,7 @@ bool BViewEditor::MessageReceived(BMessage* msg)
 		case MSG_VIEW_SET_POSITION:
 		{
 			float x, y;
-			// "20, 30" or "20 30"
-			if (sscanf(fPosition->Text(), " %f , %f", &x, &y) == 2 ||
-				sscanf(fPosition->Text(), " %f %f", &x, &y) == 2)
+			if (ParsePair(fPosition->Text(), &x, &y))
 			{
 				Target()->MoveTo(x, y);
 				// the white frame around the selected element goes with it
@@ -134,6 +145,34 @@ bool BViewEditor::MessageReceived(BMessage* msg)
 				char position[64];
 				sprintf(position, "%g, %g", now.x, now.y);
 				fPosition->SetText(position);
+			}
+			return true;
+		}
+
+		case MSG_VIEW_SET_SIZE:
+		{
+			float width, height;
+			if (ParsePair(fSize->Text(), &width, &height) && width >= 0 && height >= 0)
+			{
+				Target()->ResizeTo(width, height);
+				// the white frame around the selected element goes with it
+				EditingControl* handle = NULL;
+				if (Window() != NULL)
+					handle = dynamic_cast<EditingControl*>(Window()->FindView("edithandle"));
+				if (handle != NULL && handle->controlled == Target())
+				{
+					handle->ResizeTo(Target()->Bounds().right + 10,
+									 Target()->Bounds().bottom + 10);
+					handle->Invalidate();
+				}
+			}
+			else
+			{
+				// not two sizes: put the real size back
+				char size[64];
+				sprintf(size, "%g, %g", Target()->Frame().Width(),
+						Target()->Frame().Height());
+				fSize->SetText(size);
 			}
 			return true;
 		}
@@ -236,6 +275,16 @@ void BViewEditor::Init()
 									 new BMessage(MSG_VIEW_SET_POSITION));
 		fPosition->SetDivider(LabelDivider());
 		AddControl(fPosition);
+	}
+
+	if (!fSize)
+	{
+		bottom = Bottom();
+		fSize = new BTextControl(BRect(10, bottom, 190, bottom + 20),
+								 "size", "Size: ", "",
+								 new BMessage(MSG_VIEW_SET_SIZE));
+		fSize->SetDivider(LabelDivider());
+		AddControl(fSize);
 	}
 }
 //------------------------------------------------------------------------------

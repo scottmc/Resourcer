@@ -69,6 +69,7 @@ class BViewEditor
 		BStringView*	fClassName;
 		BTextControl*	fViewName;
 		BTextControl*	fPosition;
+		BTextControl*	fSize;
 		BView*			fParent;
 		BView*			fTarget;
 		int				fBottom;
