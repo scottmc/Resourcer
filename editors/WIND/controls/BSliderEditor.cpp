@@ -48,6 +48,23 @@
 // Globals ---------------------------------------------------------------------
 
 //------------------------------------------------------------------------------
+// Colors are shown and typed as six hex digits, RRGGBB
+static void FormatColor(rgb_color color, char* text)
+{
+	sprintf(text, "%02X%02X%02X", color.red, color.green, color.blue);
+}
+//------------------------------------------------------------------------------
+static rgb_color ParseColor(const char* text)
+{
+	unsigned long value = strtoul(text, NULL, 16);
+	rgb_color color;
+	color.red = (value >> 16) & 0xFF;
+	color.green = (value >> 8) & 0xFF;
+	color.blue = value & 0xFF;
+	color.alpha = 255;
+	return color;
+}
+//------------------------------------------------------------------------------
 BSliderEditor::BSliderEditor()
 	:	fModMsg(NULL),
 		fSnoozeAmount(NULL),
@@ -82,7 +99,7 @@ void BSliderEditor::SetTo(BMessage* archive)
 
 	Label = "";
 	archive->FindString("_maxlbl", &Label);
-	fMinLabel->SetText(Label.String());
+	fMaxLabel->SetText(Label.String());
 
 	thumb_style style = B_BLOCK_THUMB;
 	if (archive->FindInt16("_sstyle", (int16*)&style))
@@ -152,30 +169,29 @@ void BSliderEditor::SetTo(BMessage* archive)
 	}
 	fIncrValue->SetText((BString() << increment).String());
 
-	rgb_color barcolor;
+	// What is in the archive, else what the slider has
+	char colortext[12];
+	rgb_color barcolor = Target()->BarColor();
 	if (archive->FindInt32("_bcolor", (int32*)&barcolor))
 	{
 		DEBUG_ARCHIVE("_bcolor");
+		barcolor = Target()->BarColor();
 	}
-	else
-	{
-		char colortext[12];
-		sprintf(colortext, "%lX", (unsigned long)*(uint32*)&barcolor);
-		fBarColor->SetText(colortext);
-	}
+	FormatColor(barcolor, colortext);
+	fBarColor->SetText(colortext);
 
-	rgb_color fillcolor;
+	rgb_color fillcolor = barcolor;
 	if (archive->FindInt32("_fcolor", (int32*)&fillcolor))
 	{
 		fUseFillCheck->SetValue(B_CONTROL_OFF);
 		fFillColor->SetEnabled(false);
+		fFillColor->SetText("");
 	}
 	else
 	{
 		fUseFillCheck->SetValue(B_CONTROL_ON);
 		fFillColor->SetEnabled(true);
-		char colortext[12];
-		sprintf(colortext, "%lX", (unsigned long)*(uint32*)&fillcolor);
+		FormatColor(fillcolor, colortext);
 		fFillColor->SetText(colortext);
 	}
 
@@ -289,8 +305,7 @@ bool BSliderEditor::MessageReceived(BMessage* msg)
 
 		case MSG_SLIDER_SET_BAR_COLOR:
 		{
-			int32 color = atoi(fBarColor->Text());
-			Target()->SetBarColor(*(rgb_color*)&color);
+			Target()->SetBarColor(ParseColor(fBarColor->Text()));
 			Target()->Invalidate();
 			return true;
 		}
@@ -299,12 +314,16 @@ bool BSliderEditor::MessageReceived(BMessage* msg)
 		case MSG_SLIDER_SET_FILL_COLOR:
 		{
 			bool use = fUseFillCheck->Value();
-			int32 color = atoi(fFillColor->Text());
-			Target()->UseFillColor(use, (rgb_color*)&color);
+			rgb_color color = ParseColor(fFillColor->Text());
+			Target()->UseFillColor(use, &color);
 			fFillColor->SetEnabled(use);
 			Target()->Invalidate();
 			return true;
 		}
+
+		case MSG_SLIDER_SET_SNOOZE:
+			Target()->SetSnoozeAmount(atoi(fSnoozeAmount->Text()));
+			return true;
 
 		case MSG_SLIDER_SET_THICKNESS:
 			Target()->SetBarThickness(atof(fBarThickness->Text()));
@@ -321,6 +340,11 @@ const char* BSliderEditor::Supports()
 	return "BSlider";
 }
 //------------------------------------------------------------------------------
+bool BSliderEditor::UsesLayout() const
+{
+	return true;
+}
+//------------------------------------------------------------------------------
 void BSliderEditor::Init()
 {
 	int bottom = Bottom();
@@ -330,7 +354,7 @@ void BSliderEditor::Init()
 		fModMsg = new BTextControl(BRect(10, bottom, 190, bottom + 20),
 								   "modmsg", "Modification Message: ", "",
 								   new BMessage(MSG_SLIDER_SET_MOD_MSG));
-		fModMsg->SetDivider(be_plain_font->StringWidth("Modification Message: "));
+		fModMsg->SetDivider(DividerFor("Modification Message: "));
 		AddControl(fModMsg);
 	}
 
@@ -340,7 +364,7 @@ void BSliderEditor::Init()
 		fMinLabel = new BTextControl(BRect(10, bottom, 190, bottom + 20),
 									 "minlabel", "Left Label: ", "",
 									 new BMessage(MSG_SLIDER_SET_LIMIT_LABELS));
-		fMinLabel->SetDivider(be_plain_font->StringWidth("Left Label: "));
+		fMinLabel->SetDivider(DividerFor("Left Label: "));
 		AddControl(fMinLabel);
 	}
 
@@ -350,7 +374,7 @@ void BSliderEditor::Init()
 		fMaxLabel = new BTextControl(BRect(10, bottom, 190, bottom + 20),
 									 "maxlabel", "Right Label: ", "",
 									 new BMessage(MSG_SLIDER_SET_LIMIT_LABELS));
-		fMaxLabel->SetDivider(be_plain_font->StringWidth("Right Label: "));
+		fMaxLabel->SetDivider(DividerFor("Right Label: "));
 		AddControl(fMaxLabel);
 	}
 
@@ -360,7 +384,7 @@ void BSliderEditor::Init()
 		fMinValue = new BTextControl(BRect(10, bottom, 190, bottom + 20),
 									 "minvalue", "Min Value: ", "",
 									 new BMessage(MSG_SLIDER_SET_MIN_VALUE));
-		fMinValue->SetDivider(be_plain_font->StringWidth("Min Value: "));
+		fMinValue->SetDivider(DividerFor("Min Value: "));
 		AddControl(fMinValue);
 	}
 
@@ -370,7 +394,7 @@ void BSliderEditor::Init()
 		fMaxValue = new BTextControl(BRect(10, bottom, 190, bottom + 20),
 									 "maxvalue", "Max Value: ", "",
 									 new BMessage(MSG_SLIDER_SET_MAX_VALUE));
-		fMaxValue->SetDivider(be_plain_font->StringWidth("Max Value: "));
+		fMaxValue->SetDivider(DividerFor("Max Value: "));
 		AddControl(fMaxValue);
 	}
 
@@ -380,8 +404,8 @@ void BSliderEditor::Init()
 		fIncrValue = new BTextControl(BRect(10, bottom, 190, bottom + 20),
 									  "incrvalue", "Increment: ", "",
 									  new BMessage(MSG_SLIDER_SET_INCREMENT));
-		fIncrValue->SetDivider(be_plain_font->StringWidth("Increment: "));
-		AddControl(fMaxValue);
+		fIncrValue->SetDivider(DividerFor("Increment: "));
+		AddControl(fIncrValue);
 	}
 
 	if (!fOrientation)
@@ -394,6 +418,7 @@ void BSliderEditor::Init()
 									  new BMessage(MSG_SLIDER_SET_ORIENT_HORZ)));
 		fOrientation->Menu()->AddItem(new BMenuItem("Vertical",
 									  new BMessage(MSG_SLIDER_SET_ORIENT_VERT)));
+		fOrientation->SetDivider(DividerFor("Orientation: "));
 		AddControl(fOrientation);
 	}
 
@@ -407,6 +432,7 @@ void BSliderEditor::Init()
 									new BMessage(MSG_SLIDER_SET_HASH_TOP_LEFT)));
 		fHashStyle->Menu()->AddItem(new BMenuItem("Bottom",
 									new BMessage(MSG_SLIDER_SET_HASH_BOTTOM_RIGHT)));
+		fHashStyle->SetDivider(DividerFor("Hash Marks: "));
 		AddControl(fHashStyle);
 	}
 
@@ -416,7 +442,7 @@ void BSliderEditor::Init()
 		fHashCount = new BTextControl(BRect(10, bottom, 190, bottom + 20),
 									  "hashcount", "Hash Mark Count: ", "",
 									  new BMessage(MSG_SLIDER_SET_HASH_COUNT));
-		fHashCount->SetDivider(be_plain_font->StringWidth("Hash Mark Count: "));
+		fHashCount->SetDivider(DividerFor("Hash Mark Count: "));
 		AddControl(fHashCount);
 	}
 
@@ -430,6 +456,7 @@ void BSliderEditor::Init()
 									 new BMessage(MSG_SLIDER_SET_BLOCK_THUMB)));
 		fThumbStyle->Menu()->AddItem(new BMenuItem("Triangle",
 									 new BMessage(MSG_SLIDER_SET_TRI_THUMB)));
+		fThumbStyle->SetDivider(DividerFor("Thumb Style: "));
 		AddControl(fThumbStyle);
 	}
 
@@ -439,7 +466,7 @@ void BSliderEditor::Init()
 		fBarColor = new BTextControl(BRect(10, bottom, 190, bottom + 20),
 									 "barcolor", "Bar Color: ", "",
 									 new BMessage(MSG_SLIDER_SET_BAR_COLOR));
-		fBarColor->SetDivider(be_plain_font->StringWidth("Bar Color: "));
+		fBarColor->SetDivider(DividerFor("Bar Color: "));
 		AddControl(fBarColor);
 	}
 
@@ -458,7 +485,7 @@ void BSliderEditor::Init()
 		fFillColor = new BTextControl(BRect(10, bottom, 190, bottom + 20),
 									  "fillcolor", "Fill Color: ", "",
 									  new BMessage(MSG_SLIDER_SET_FILL_COLOR));
-		fFillColor->SetDivider(be_plain_font->StringWidth("Bar Thickness: "));
+		fFillColor->SetDivider(DividerFor("Fill Color: "));
 		AddControl(fFillColor);
 	}
 
@@ -468,7 +495,7 @@ void BSliderEditor::Init()
 		fBarThickness = new BTextControl(BRect(10, bottom, 190, bottom + 20),
 										 "barthickness", "Bar Thickness: ", "",
 										 new BMessage(MSG_SLIDER_SET_THICKNESS));
-		fBarThickness->SetDivider(be_plain_font->StringWidth("Bar Thickness: "));
+		fBarThickness->SetDivider(DividerFor("Bar Thickness: "));
 		AddControl(fBarThickness);
 	}
 
@@ -478,7 +505,7 @@ void BSliderEditor::Init()
 		fSnoozeAmount = new BTextControl(BRect(10, bottom, 190, bottom + 20),
 										 "snoozeamount", "Snooze: ", "",
 										 new BMessage(MSG_SLIDER_SET_SNOOZE));
-		fSnoozeAmount->SetDivider(be_plain_font->StringWidth("Snooze: "));
+		fSnoozeAmount->SetDivider(DividerFor("Snooze: "));
 		AddControl(fSnoozeAmount);
 	}
 
