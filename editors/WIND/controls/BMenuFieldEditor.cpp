@@ -84,6 +84,11 @@ const char* BMenuFieldEditor::Supports()
 	return "BMenuField";
 }
 //------------------------------------------------------------------------------
+bool BMenuFieldEditor::UsesLayout() const
+{
+	return true;
+}
+//------------------------------------------------------------------------------
 void BMenuFieldEditor::Init()
 {
 	int bottom;
@@ -93,7 +98,7 @@ void BMenuFieldEditor::Init()
 		fLabelText = new BTextControl(BRect(10, bottom, 190, bottom + 20),
 									  "label", "Label: ", "",
 									  new BMessage(MSG_MENU_FIELD_SET_LABEL));
-		fLabelText->SetDivider(be_plain_font->StringWidth("Label: "));
+		fLabelText->SetDivider(DividerFor("Label: "));
 		AddControl(fLabelText);
 	}
 
@@ -103,7 +108,7 @@ void BMenuFieldEditor::Init()
 		fDefaultText = new BTextControl(BRect(10, bottom, 190, bottom + 20),
 										"deftext", "Default Menu Text: ", "",
 										new BMessage(MSG_MENU_SET_DEFAULT_TEXT));
-		fDefaultText->SetDivider(be_plain_font->StringWidth(fDefaultText->Label()));
+		fDefaultText->SetDivider(DividerFor("Default Menu Text: "));
 		AddControl(fDefaultText);
 	}
 
@@ -111,6 +116,9 @@ void BMenuFieldEditor::Init()
 	{
 		bottom = Bottom();
 		fMenuEditor = new MenuEditor(BRect(20, bottom, 240, bottom + 230));
+		// keep its height, let the layout have its width
+		fMenuEditor->SetExplicitMaxSize(BSize(B_SIZE_UNLIMITED,
+											  fMenuEditor->Frame().Height()));
 	}
 
 	if (Target())

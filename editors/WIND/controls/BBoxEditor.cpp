@@ -83,6 +83,11 @@ const char* BBoxEditor::Supports()
 	return "BBox";
 }
 //------------------------------------------------------------------------------
+bool BBoxEditor::UsesLayout() const
+{
+	return true;
+}
+//------------------------------------------------------------------------------
 void BBoxEditor::Init()
 {
 	int bottom = Bottom();
@@ -91,7 +96,7 @@ void BBoxEditor::Init()
 		fLabelText = new BTextControl(BRect(10, bottom, 190, bottom + 20),
 									  "label", "Label: ", "",
 									  new BMessage(MSG_BOX_SET_LABEL));
-		fLabelText->SetDivider(be_plain_font->StringWidth("Label: "));
+		fLabelText->SetDivider(DividerFor("Label: "));
 		AddControl(fLabelText);
 	}
 
@@ -107,6 +112,7 @@ void BBoxEditor::Init()
 										new BMessage(MSG_BOX_FANCY_BORDER)));
 		fBorderStyle->Menu()->AddItem(new BMenuItem("None",
 									 new BMessage(MSG_BOX_NO_BORDER)));
+		fBorderStyle->SetDivider(DividerFor("Border Style: "));
 		AddControl(fBorderStyle);
 	}
 
