@@ -91,6 +91,11 @@ const char* BColorControlEditor::Supports()
 	return "BColorControl";
 }
 //------------------------------------------------------------------------------
+bool BColorControlEditor::UsesLayout() const
+{
+	return true;
+}
+//------------------------------------------------------------------------------
 void BColorControlEditor::Init()
 {
 	int bottom;
@@ -100,7 +105,7 @@ void BColorControlEditor::Init()
 		fCellSize = new BTextControl(BRect(10, bottom, 190, bottom + 20),
 									 "cellsize", "Cell Size: ", "",
 									 new BMessage(MSG_COLOR_CONTROL_SET_CELL_SIZE));
-		fCellSize->SetDivider(be_plain_font->StringWidth(fCellSize->Label()));
+		fCellSize->SetDivider(DividerFor("Cell Size: "));
 		AddControl(fCellSize);
 	}
 
@@ -116,7 +121,7 @@ void BColorControlEditor::Init()
 		fLayoutField->Menu()->AddItem(new BMenuItem("16 by 16", new BMessage(MSG_COLOR_CONTROL_SET_ALIGN)));
 		fLayoutField->Menu()->AddItem(new BMenuItem("64 by 4", new BMessage(MSG_COLOR_CONTROL_SET_ALIGN)));
 		fLayoutField->Menu()->AddItem(new BMenuItem("32 by 8", new BMessage(MSG_COLOR_CONTROL_SET_ALIGN)));
-		fLayoutField->SetDivider(be_plain_font->StringWidth(fLayoutField->Label()));
+		fLayoutField->SetDivider(DividerFor("Cell Alignment: "));
 
 		AddControl(fLayoutField);
 	}

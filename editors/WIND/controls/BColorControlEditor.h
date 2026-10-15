@@ -30,6 +30,7 @@ class BColorControlEditor : public BControlEditor
 		virtual void		SetTo(BMessage* archive);
 		virtual bool		MessageReceived(BMessage* msg);
 		virtual const char*	Supports();
+		virtual bool		UsesLayout() const;
 
 	private:
 		void Init();
