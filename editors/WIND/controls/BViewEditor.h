@@ -56,6 +56,8 @@ class BViewEditor
 		// The width of the labels of the text fields, wide enough for the
 		// longest so none is cut short and the fields line up.
 		static float LabelDivider();
+		// Label divider for one label: its width plus room so it isn't cut short
+		static float DividerFor(const char* label, float padding = 10);
 		void AddControl(BView* control);
 		BView* Parent();
 		BView* Target();

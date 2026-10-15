@@ -147,6 +147,11 @@ const char* BTextControlEditor::Supports()
 	return "BTextControl";
 }
 //------------------------------------------------------------------------------
+bool BTextControlEditor::UsesLayout() const
+{
+	return true;
+}
+//------------------------------------------------------------------------------
 void BTextControlEditor::Init()
 {
 	int bottom;
@@ -156,7 +161,7 @@ void BTextControlEditor::Init()
 		fModMsg = new BTextControl(BRect(10, bottom, 190, bottom + 20),
 								   "modmsg", "Modification Message: ", "",
 								   new BMessage(MSG_TEXT_CTRL_SET_MOD_MSG));
-		fModMsg->SetDivider(be_plain_font->StringWidth("Modification Message: "));
+		fModMsg->SetDivider(DividerFor("Modification Message: "));
 		AddControl(fModMsg);
 
 	}
@@ -167,7 +172,7 @@ void BTextControlEditor::Init()
 		fText = new BTextControl(BRect(10, bottom, 190, bottom + 20),
 								 "text", "Text: ", "",
 								 new BMessage(MSG_TEXT_CTRL_SET_TEXT));
-		fText->SetDivider(be_plain_font->StringWidth("Text: "));
+		fText->SetDivider(DividerFor("Text: "));
 		AddControl(fText);
 	}
 
@@ -177,6 +182,7 @@ void BTextControlEditor::Init()
 		fDivider = new BTextControl(BRect(10, bottom, 190, bottom + 20),
 									"divider", "Divider: ", "",
 									new BMessage(MSG_TEXT_CTRL_SET_DIVIDER));
+		fDivider->SetDivider(DividerFor("Divider: "));
 		AddControl(fDivider);
 	}
 
@@ -192,6 +198,7 @@ void BTextControlEditor::Init()
 									new BMessage(MSG_TEXT_CTRL_SET_ALIGNMENT)));
 		fLabelAlignment->Menu()->AddItem(new BMenuItem("Center",
 									new BMessage(MSG_TEXT_CTRL_SET_ALIGNMENT)));
+		fLabelAlignment->SetDivider(DividerFor("Label Alignment: "));
 		AddControl(fLabelAlignment);
 	}
 
@@ -207,6 +214,7 @@ void BTextControlEditor::Init()
 										new BMessage(MSG_TEXT_CTRL_SET_ALIGNMENT)));
 		fTextAlignment->Menu()->AddItem(new BMenuItem("Center",
 										new BMessage(MSG_TEXT_CTRL_SET_ALIGNMENT)));
+		fTextAlignment->SetDivider(DividerFor("Text Alignment: "));
 		AddControl(fTextAlignment);
 	}
 }

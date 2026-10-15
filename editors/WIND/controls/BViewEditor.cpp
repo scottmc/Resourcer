@@ -103,6 +103,11 @@ bool BViewEditor::UsesLayout() const
 	return false;
 }
 //------------------------------------------------------------------------------
+float BViewEditor::DividerFor(const char* label, float padding)
+{
+	return ceilf(be_plain_font->StringWidth(label)) + padding;
+}
+//------------------------------------------------------------------------------
 float BViewEditor::LabelDivider()
 {
 	float widest = be_plain_font->StringWidth("View Name: ");

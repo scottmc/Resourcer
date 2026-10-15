@@ -366,7 +366,7 @@ void BTextViewEditor::Init()
 			msg->AddInt32("colorspace", ColorSpaces[i].code);
 			fColorSpace->Menu()->AddItem(new BMenuItem(ColorSpaces[i].name, msg));
 		}
-		fColorSpace->SetDivider(be_plain_font->StringWidth("Color Space: "));
+		fColorSpace->SetDivider(DividerFor("Color Space: ", fIsTextControlChild ? 10 : 0));
 		AddControl(fColorSpace);
 	}
 
@@ -377,7 +377,7 @@ void BTextViewEditor::Init()
 											"disallowedchars",
 											"Disallowed Characters: ", "",
 											new BMessage(MSG_TEXT_VIEW_DISALLOWED_CHARS));
-		fDisallowedChars->SetDivider(be_plain_font->StringWidth("Disallowed Characters: "));
+		fDisallowedChars->SetDivider(DividerFor("Disallowed Characters: ", fIsTextControlChild ? 10 : 0));
 		AddControl(fDisallowedChars);
 	}
 
@@ -387,7 +387,7 @@ void BTextViewEditor::Init()
 		fMaxBytes = new BTextControl(BRect(10, bottom, 190, bottom + 20),
 									 "maxbytes", "Max Bytes: ", "",
 									 new BMessage(MSG_TEXT_VIEW_MAX_BYTES));
-		fMaxBytes->SetDivider(be_plain_font->StringWidth("Max Bytes: "));
+		fMaxBytes->SetDivider(DividerFor("Max Bytes: ", fIsTextControlChild ? 10 : 0));
 		AddControl(fMaxBytes);
 	}
 
