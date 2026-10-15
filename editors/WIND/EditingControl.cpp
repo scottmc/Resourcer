@@ -231,19 +231,25 @@ void EditingControl::Pulse(void)
 			notInit = false;
 		SetResizingMode(controlled->ResizingMode());
 		Invalidate(Bounds());
-		BMessage active;
-		active.AddPointer("view", (const void*)cur);
+		ShowEditor();
+	}
+	}
+}
+//------------------------------------------------------------------------------
+// Shows the Focus View editor for the controlled view, as it is now.
+void EditingControl::ShowEditor(void)
+{
+	if (controlled == NULL)
+		return;
 
-		if (cur)
-		{
-			BMessage ctrl;
-			cur->Archive(&ctrl);
-			ctrl.AddMessenger("Resourcer:messenger", cur);
-			active.AddMessage("ctrl", &ctrl);
-		}
-		editpanel->SetTo(&active);
-	}
-	}
+	BMessage active;
+	active.AddPointer("view", (const void*)controlled);
+
+	BMessage ctrl;
+	controlled->Archive(&ctrl);
+	ctrl.AddMessenger("Resourcer:messenger", controlled);
+	active.AddMessage("ctrl", &ctrl);
+	editpanel->SetTo(&active);
 }
 //------------------------------------------------------------------------------
 void EditingControl::MouseDown(BPoint point) {
@@ -265,6 +271,7 @@ void EditingControl::MouseDown(BPoint point) {
 	int32 xdiff = -32767;
 	int32 ydiff = -32767;
 	signed char resizing = -2;
+	bool changed = false;
 	for(;true;snooze(20000)) {
 		GetMouse(&temp,&tmpbtn,true);
 		if (tmpbtn != B_PRIMARY_MOUSE_BUTTON)
@@ -277,6 +284,7 @@ void EditingControl::MouseDown(BPoint point) {
 			else
 				resizing = false;
 		} else {
+			changed = true;
 			if (resizing) {
 				ResizeTo(point.x + 5,point.y + 5);
 				controlled->ResizeTo(Bounds().right - 15,Bounds().bottom - 15);
@@ -294,6 +302,9 @@ void EditingControl::MouseDown(BPoint point) {
 	}
 	Window()->Unlock();
 	Invalidate(Bounds());
+	// the editor's position field shows where the view was before the drag
+	if (changed)
+		ShowEditor();
 }
 //------------------------------------------------------------------------------
 

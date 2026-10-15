@@ -38,6 +38,7 @@ class EditingControl : public BView
 	private:
 		bool IsTopView(BView *view);
 		void PutControlledBack(void);
+		void ShowEditor(void);
 };
 //------------------------------------------------------------------------------
 

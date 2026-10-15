@@ -10,11 +10,13 @@
 // Standard Includes -----------------------------------------------------------
 #include <algorithm>
 #include <math.h>
+#include <stdio.h>
 
 // System Includes -------------------------------------------------------------
 #include <interface/StringView.h>
 #include <interface/TextControl.h>
 #include <interface/View.h>
+#include <interface/Window.h>
 #include <support/ClassInfo.h>
 #include <support/String.h>
 
@@ -23,6 +25,7 @@
 // Local Includes --------------------------------------------------------------
 #include "BViewEditor.h"
 #include "../EditingPanel.h"
+#include "../EditingControl.h"
 #include "../WIND.h"
 
 // Local Defines ---------------------------------------------------------------
@@ -35,6 +38,7 @@ BViewEditor::ControlKeeper BViewEditor::fControlKeeper;
 BViewEditor::BViewEditor()
 	:	fClassName(NULL),
 		fViewName(NULL),
+		fPosition(NULL),
 		fBottom(10)
 {
 }
@@ -75,8 +79,24 @@ void BViewEditor::SetTo(BMessage* archive)
 
 	fViewName->SetTarget(Parent());
 
+	// Where the element is in the window (while it is selected it is a child
+	// of the window, so its frame is in window coordinates)
+	BRect frame;
+	if (archive->FindRect("_frame", &frame) == B_OK)
+	{
+		char position[64];
+		sprintf(position, "%g, %g", frame.left, frame.top);
+		fPosition->SetText(position);
+	}
+	else
+	{
+		fPosition->SetText("");
+	}
+	fPosition->SetTarget(Parent());
+
 	Parent()->AddChild(fClassName);
 	Parent()->AddChild(fViewName);
+	Parent()->AddChild(fPosition);
 }
 //------------------------------------------------------------------------------
 bool BViewEditor::MessageReceived(BMessage* msg)
@@ -86,6 +106,35 @@ bool BViewEditor::MessageReceived(BMessage* msg)
 		case MSG_VIEW_SET_NAME:
 		{
 			Target()->SetName(fViewName->Text());
+			return true;
+		}
+
+		case MSG_VIEW_SET_POSITION:
+		{
+			float x, y;
+			// "20, 30" or "20 30"
+			if (sscanf(fPosition->Text(), " %f , %f", &x, &y) == 2 ||
+				sscanf(fPosition->Text(), " %f %f", &x, &y) == 2)
+			{
+				Target()->MoveTo(x, y);
+				// the white frame around the selected element goes with it
+				EditingControl* handle = NULL;
+				if (Window() != NULL)
+					handle = dynamic_cast<EditingControl*>(Window()->FindView("edithandle"));
+				if (handle != NULL && handle->controlled == Target())
+				{
+					handle->MoveTo(x - 5, y - 5);
+					handle->Invalidate();
+				}
+			}
+			else
+			{
+				// not two numbers: put the real position back
+				BPoint now = Target()->Frame().LeftTop();
+				char position[64];
+				sprintf(position, "%g, %g", now.x, now.y);
+				fPosition->SetText(position);
+			}
 			return true;
 		}
 	}
@@ -177,6 +226,16 @@ void BViewEditor::Init()
 									 new BMessage(MSG_VIEW_SET_NAME));
 		fViewName->SetDivider(LabelDivider());
 		AddControl(fViewName);
+	}
+
+	if (!fPosition)
+	{
+		bottom = Bottom();
+		fPosition = new BTextControl(BRect(10, bottom, 190, bottom + 20),
+									 "position", "Position: ", "",
+									 new BMessage(MSG_VIEW_SET_POSITION));
+		fPosition->SetDivider(LabelDivider());
+		AddControl(fPosition);
 	}
 }
 //------------------------------------------------------------------------------

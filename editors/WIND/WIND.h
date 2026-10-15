@@ -30,6 +30,7 @@
 #define MSG_VIEW_SET_CHECKED			((uint32)-2000)
 
 #define MSG_VIEW_SET_NAME				((uint32)-400)
+#define MSG_VIEW_SET_POSITION			((uint32)-401)
 
 #define MSG_CONTROL_SET_LABEL			((uint32)-500)
 #define MSG_CONTROL_SET_MSG				((uint32)-510)

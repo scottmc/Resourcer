@@ -68,6 +68,7 @@ class BViewEditor
 		BMessenger		fControl;
 		BStringView*	fClassName;
 		BTextControl*	fViewName;
+		BTextControl*	fPosition;
 		BView*			fParent;
 		BView*			fTarget;
 		int				fBottom;
