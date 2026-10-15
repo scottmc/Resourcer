@@ -50,14 +50,20 @@ ContainerView *ownerof(BView *view);
 class ContainerView : public BView {
 	public:
 		ContainerView(unsigned char *data, size_t length);
+		~ContainerView();
+		void SetData(unsigned char *data, size_t length);
+		void Reserve(size_t needed);
 		void GoToPage(int32 page,bool refresh = true);
 		void UseFixedFont(void);
 		size_t CopyTo(void **into);
 		HEXView *HEX;
 		ASCIIView *ASCII;
 		AddressView *Address;
+		//	The editor's own copy of the data, Resourcer keeps the original to
+		//	see whether anything changed so it must not be edited in place.
 		unsigned char *res;
 		size_t size;
+		size_t capacity;
 		int32 curPage;
 };
 
@@ -280,8 +286,10 @@ ContainerView::ContainerView(unsigned char *data, size_t length) : BView("hex",B
 		ASCII = new ASCIIView("ASCIIView",B_FRAME_EVENTS | B_WILL_DRAW | B_PULSE_NEEDED | B_NAVIGABLE);
 		BScrollView *hexscroll = new BScrollView("HEXScroll",HEX,B_WILL_DRAW | B_FRAME_EVENTS,false,true,B_FANCY_BORDER);
 		BScrollView *asciiscroll = new BScrollView("ASCIIScroll",ASCII,B_WILL_DRAW | B_FRAME_EVENTS,false,true,B_FANCY_BORDER);
-		res = data;
-		size = length;
+		res = NULL;
+		size = 0;
+		capacity = 0;
+		SetData(data,length);
 		curPage = 0;
 		Address = new AddressView(this);
 		char string[20];
@@ -306,15 +314,40 @@ ContainerView::ContainerView(unsigned char *data, size_t length) : BView("hex",B
 		UseFixedFont();
 		//	The container is complete, so the two views can fill themselves in
 		if (length < PAGE) {
-			ASCII->SetText((char *)(data),length);
+			ASCII->SetText((char *)(res),length);
 			ASCII->SetMaxBytes(PAGE);
 		} else {
 			ASCII->SetMaxBytes(PAGE);
-			ASCII->SetText((char *)(data),PAGE);
+			ASCII->SetText((char *)(res),PAGE);
 		}
 		HEX->SetMaxBytes(PAGE * 2);
 	}
 	
+ContainerView::~ContainerView() {
+	delete [] res;
+}
+
+//	Copies the data, leaving the caller's buffer alone
+void ContainerView::SetData(unsigned char *data, size_t length) {
+	delete [] res;
+	capacity = length + PAGE;
+	res = new unsigned char[capacity];
+	if (data != NULL && length > 0)
+		memcpy(res,data,length);
+	size = length;
+}
+
+//	Makes room for at least this many bytes
+void ContainerView::Reserve(size_t needed) {
+	if (needed <= capacity)
+		return;
+	unsigned char *bigger = new unsigned char[needed + PAGE];
+	memcpy(bigger,res,size);
+	delete [] res;
+	res = bigger;
+	capacity = needed + PAGE;
+}
+
 //	Both views use the fixed font, wrapping after one row of 16 bytes (32 hex
 //	characters, 16 text characters) so the two line up row for row. That row is
 //	also the narrowest the views can be without cutting the rows off.
@@ -346,11 +379,14 @@ void ContainerView::GoToPage(int32 page,bool refresh) {
 		return;
 	}
 	if (refresh) {
-		unsigned char *yikes = new unsigned char[strlen(HEX->Text()) /2];
-		dehex(HEX->Text(),strlen(HEX->Text()),yikes);
-		memcpy(res + (curPage * PAGE),yikes,strlen(HEX->Text()) /2);
+		size_t count = strlen(HEX->Text()) / 2;
+		unsigned char *yikes = new unsigned char[count + 1];
+		dehex(HEX->Text(),count * 2,yikes);
+		Reserve((curPage * PAGE) + count);
+		memcpy(res + (curPage * PAGE),yikes,count);
+		delete [] yikes;
 		if ((curPage + 1) * PAGE > size)
-			size = (curPage * PAGE) + (strlen(HEX->Text())/2);
+			size = (curPage * PAGE) + count;
 	}
 	if ((page + 1) * PAGE > size)
 		ASCII->SetText(((char *)(res) + (page * PAGE)),size - (page * PAGE));
@@ -452,8 +488,8 @@ long openfile(void *m) {
 	}
 	file.Read(data,size);
 	bkgview->Window()->Lock();
-	((ContainerView *)(bkgview->FindView("hex")))->res = data;
-	((ContainerView *)(bkgview->FindView("hex")))->size = size;
+	((ContainerView *)(bkgview->FindView("hex")))->SetData(data,size);
+	delete [] data;
 	((ContainerView *)(bkgview->FindView("hex")))->curPage = 0;
 	((ContainerView *)(bkgview->FindView("hex")))->GoToPage(0,false);
 	char *string = new char[20];
