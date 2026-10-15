@@ -1,0 +1,65 @@
+SUMMARY="A resource editor"
+DESCRIPTION="Resourcer is an open-source resource editor. It contains editors or \
+viewers for 69 data types, including windows (for building app interfaces), \
+cursors, images, sounds, movies, icons, and text.
+
+Resources can be edited in applications, libraries and resource (.rsrc) files, \
+and file attributes can be edited too. Resourcer finds one add-on editor for \
+each resource type in the editors folder next to the application, and shows a \
+generic hex editor for any type that has none."
+HOMEPAGE="https://github.com/scottmc/Resourcer"
+COPYRIGHT="2000 Nathan Whitehorn
+	2026 Scott McCreary
+	2026 Coding by Claude AI"
+LICENSE="BSD (3-clause)"
+REVISION="1"
+SOURCE_URI="https://github.com/scottmc/Resourcer/archive/refs/tags/v$portVersion.tar.gz"
+CHECKSUM_SHA256="77ee0f8c8fdf6829299ab0669dec08dc2265ab5a06615c0127a82a41bd9683b5"
+SOURCE_FILENAME="resourcer-$portVersion.tar.gz"
+SOURCE_DIR="Resourcer-$portVersion"
+
+ARCHITECTURES="x86_64 ?x86_gcc2 ?x86"
+
+PROVIDES="
+	resourcer = $portVersion
+	app:Resourcer = $portVersion
+	"
+REQUIRES="
+	haiku
+	"
+
+BUILD_REQUIRES="
+	haiku_devel
+	"
+BUILD_PREREQUIRES="
+	makefile_engine
+	cmd:gcc
+	cmd:ld
+	cmd:make
+	cmd:mkdepend
+	cmd:xres
+	"
+
+BUILD()
+{
+	# The top level Makefile builds the application and one add-on per
+	# resource type into ./build. ResourceLib, a helper library for other
+	# programs, is left out. Each editor is its own make run in a shared
+	# object folder, so this is not built in parallel.
+	make app editors
+}
+
+INSTALL()
+{
+	# Resourcer finds its editors in an "editors" folder next to the
+	# application, so the two stay together.
+	appDir=$appsDir/Resourcer
+	mkdir -p $appDir/editors
+	cp build/Resourcer $appDir
+	cp build/editors/* $appDir/editors
+
+	mkdir -p $docDir
+	cp README.md $docDir
+
+	addAppDeskbarSymlink $appDir/Resourcer Resourcer
+}
