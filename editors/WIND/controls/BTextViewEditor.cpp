@@ -289,6 +289,12 @@ const char* BTextViewEditor::Supports()
 	return "BTextView";
 }
 //------------------------------------------------------------------------------
+bool BTextViewEditor::UsesLayout() const
+{
+	// Inside a text control the text control editor's layout is used
+	return true;
+}
+//------------------------------------------------------------------------------
 void BTextViewEditor::Init()
 {
 	int bottom;
@@ -349,7 +355,7 @@ void BTextViewEditor::Init()
 									new BMessage(MSG_TEXT_VIEW_ALIGN_RIGHT)));
 		fAlignment->Menu()->AddItem(new BMenuItem("Center",
 									new BMessage(MSG_TEXT_VIEW_ALIGN_CENTER)));
-		fAlignment->SetDivider(be_plain_font->StringWidth("Alignment: "));
+		fAlignment->SetDivider(DividerFor("Alignment: "));
 		AddControl(fAlignment);
 	}
 
@@ -366,7 +372,7 @@ void BTextViewEditor::Init()
 			msg->AddInt32("colorspace", ColorSpaces[i].code);
 			fColorSpace->Menu()->AddItem(new BMenuItem(ColorSpaces[i].name, msg));
 		}
-		fColorSpace->SetDivider(DividerFor("Color Space: ", fIsTextControlChild ? 10 : 0));
+		fColorSpace->SetDivider(DividerFor("Color Space: "));
 		AddControl(fColorSpace);
 	}
 
@@ -377,7 +383,7 @@ void BTextViewEditor::Init()
 											"disallowedchars",
 											"Disallowed Characters: ", "",
 											new BMessage(MSG_TEXT_VIEW_DISALLOWED_CHARS));
-		fDisallowedChars->SetDivider(DividerFor("Disallowed Characters: ", fIsTextControlChild ? 10 : 0));
+		fDisallowedChars->SetDivider(DividerFor("Disallowed Characters: "));
 		AddControl(fDisallowedChars);
 	}
 
@@ -387,7 +393,7 @@ void BTextViewEditor::Init()
 		fMaxBytes = new BTextControl(BRect(10, bottom, 190, bottom + 20),
 									 "maxbytes", "Max Bytes: ", "",
 									 new BMessage(MSG_TEXT_VIEW_MAX_BYTES));
-		fMaxBytes->SetDivider(DividerFor("Max Bytes: ", fIsTextControlChild ? 10 : 0));
+		fMaxBytes->SetDivider(DividerFor("Max Bytes: "));
 		AddControl(fMaxBytes);
 	}
 
@@ -397,7 +403,7 @@ void BTextViewEditor::Init()
 		fTabWidth = new BTextControl(BRect(10, bottom, 190, bottom + 20),
 									 "tabwidth", "Tab Width: ", "",
 									 new BMessage(MSG_TEXT_VIEW_TAB_WIDTH));
-		fTabWidth->SetDivider(be_plain_font->StringWidth("Tab Width: "));
+		fTabWidth->SetDivider(DividerFor("Tab Width: "));
 		AddControl(fTabWidth);
 	}
 
@@ -407,7 +413,7 @@ void BTextViewEditor::Init()
 		fTextRect = new BTextControl(BRect(10, bottom, 190, bottom + 20),
 									 "textrect", "Text Rect: ", "",
 									 new BMessage(MSG_TEXT_VIEW_TEXT_RECT));
-		fTextRect->SetDivider(be_plain_font->StringWidth("Text Rect: "));
+		fTextRect->SetDivider(DividerFor("Text Rect: "));
 		AddControl(fTextRect);
 	}
 }
