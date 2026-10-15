@@ -133,7 +133,13 @@ void DragOutlineListView::KeyDown(const char *bytes,int32 /*numBytes*/)
 
 	MenuListItem *litem;
 	if ((*bytes == B_DELETE) || (*bytes == B_BACKSPACE)) {
-		litem = ((MenuListItem *)(ItemAt(CurrentSelection())));
+		// nothing selected: nothing to delete
+		int32 selected = CurrentSelection();
+		if (selected < 0)
+			return;
+		litem = ((MenuListItem *)(ItemAt(selected)));
+		if (litem == NULL || litem->item == NULL || litem->item->Menu() == NULL)
+			return;
 		litem->item->Menu()->RemoveItem(litem->item);
 		Refresh(false);
 	}
@@ -362,6 +368,9 @@ void DragOutlineListView::RemoveSubMenu(BMenuItem *toremfrom)
 void DragOutlineListView::SetMenu(BMenu* menu)
 {
 	fMenu = menu;
+	// drop items that belong to the previous menu: they point at menu
+	// items that may be gone by now
+	MakeEmpty();
 	LoadMenu();
 }
 //------------------------------------------------------------------------------

@@ -46,6 +46,11 @@ const char* BMenuBarEditor::Supports()
 	return "BMenuBar";
 }
 //------------------------------------------------------------------------------
+bool BMenuBarEditor::UsesLayout() const
+{
+	return true;
+}
+//------------------------------------------------------------------------------
 void BMenuBarEditor::Init()
 {
 	int bottom;

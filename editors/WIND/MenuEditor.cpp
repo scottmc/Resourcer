@@ -4,13 +4,16 @@
 //------------------------------------------------------------------------------
 
 // Standard Includes -----------------------------------------------------------
+#include <math.h>
 #include <string.h>
 
 // System Includes -------------------------------------------------------------
 #include <interface/Button.h>
 #include <interface/CheckBox.h>
+#include <interface/GroupLayout.h>
 #include <interface/Menu.h>
 #include <interface/MenuField.h>
+#include <interface/Font.h>
 #include <interface/MenuItem.h>
 #include <interface/ScrollView.h>
 #include <interface/TextControl.h>
@@ -30,6 +33,11 @@
 // Globals ---------------------------------------------------------------------
 
 //------------------------------------------------------------------------------
+static float LabelWidth(const char* label)
+{
+	return ceilf(be_plain_font->StringWidth(label)) + 10;
+}
+//------------------------------------------------------------------------------
 MenuEditor::MenuEditor(BRect rect, BMenu* men)
 	:	BBox(rect, "menueditor"),
 		fListView(NULL),
@@ -45,76 +53,87 @@ MenuEditor::MenuEditor(BRect rect, BMenu* men)
 {
 	SetViewColor(216,216,216);
 
-	BRect frame(10, 10, rect.Width() - 10 - B_V_SCROLL_BAR_WIDTH, 100);
-	fListView = new DragOutlineListView(frame, Menu());
+	BGroupLayout* layout = new BGroupLayout(B_VERTICAL, 4);
+	layout->SetInsets(10, 10, 10, 10);
+	SetLayout(layout);
+
+	// the item list, tall enough for a handful of rows at any font size
+	font_height fh;
+	be_plain_font->GetHeight(&fh);
+	float rowHeight = ceilf(fh.ascent + fh.descent + fh.leading) + 4;
+
+	fListView = new DragOutlineListView(BRect(0, 0, 150, 100), Menu());
 	fListView->SetSelectionMessage(new BMessage(MSG_MENU_SELECTION_CHANGED));
-	AddChild(new BScrollView("itemscroll", fListView,
-							 B_FOLLOW_LEFT | B_FOLLOW_TOP, 0, false, true));
+	BScrollView* scroller = new BScrollView("itemscroll", fListView,
+											B_FOLLOW_LEFT | B_FOLLOW_TOP, 0,
+											false, true);
+	scroller->SetExplicitMinSize(BSize(100, rowHeight * 6));
+	scroller->SetExplicitPreferredSize(BSize(200, rowHeight * 6));
+	layout->AddView(scroller);
+
+	fLabelText = new BTextControl("label", "Label: ", "",
+								  new BMessage(MSG_MENU_SET_ITEM_LABEL));
+	fLabelText->SetDivider(LabelWidth("Label: "));
+	fLabelText->SetEnabled(false);
+	layout->AddView(fLabelText);
+
+	fMsgText = new BTextControl("msg", "Message: ", "none",
+								new BMessage(MSG_MENU_SET_ITEM_MSG));
+	fMsgText->TextView()->SetMaxBytes(4);
+	fMsgText->SetDivider(LabelWidth("Message: "));
+	fMsgText->SetEnabled(false);
+	layout->AddView(fMsgText);
+
+	// shortcut key and its modifiers share a row
+	BGroupLayout* shortcutRow = new BGroupLayout(B_HORIZONTAL, 4);
+	layout->AddItem(shortcutRow);
+
+	float shortcutDivider = LabelWidth("Shortcut: ");
+	fShortcutText = new BTextControl("shrtct", "Shortcut: ", "",
+									 new BMessage(MSG_MENU_SET_ITEM_SHORTCUT));
+	fShortcutText->SetDivider(shortcutDivider);
+	fShortcutText->SetEnabled(false);
+	fShortcutText->TextView()->SetMaxBytes(1);
+	fShortcutText->SetExplicitMaxSize(BSize(shortcutDivider
+		+ ceilf(be_plain_font->StringWidth("MMM")) + 10, B_SIZE_UNSET));
+	shortcutRow->AddView(fShortcutText);
+
+	BMenu *meniu = new BMenu("Modifier Keys");
+	meniu->AddItem(new BMenuItem("Option", new BMessage(MSG_MENU_SET_ITEM_MARKED)));
+	meniu->AddItem(new BMenuItem("Shift", new BMessage(MSG_MENU_SET_ITEM_MARKED)));
+	meniu->AddItem(new BMenuItem("Control", new BMessage(MSG_MENU_SET_ITEM_MARKED)));
+	fModifierField = new BMenuField("modchoice", NULL, meniu);
+	fModifierField->SetEnabled(false);
+	meniu->SetRadioMode(false);
+	meniu->SetLabelFromMarked(false);
+	shortcutRow->AddView(fModifierField);
+
+	fEnabledBox = new BCheckBox("enabled", "Enabled",
+								new BMessage(MSG_MENU_SET_ITEM_ENABLED));
+	fEnabledBox->SetEnabled(false);
+	layout->AddView(fEnabledBox);
+
+	BGroupLayout* buttonRow = new BGroupLayout(B_HORIZONTAL, 8);
+	layout->AddItem(buttonRow);
+	fAddItemBtn = new BButton("addiantem", "Add Item",
+							  new BMessage(MSG_MENU_NEW_ITEM));
+	buttonRow->AddView(fAddItemBtn);
+	fAddSeparatorBtn = new BButton("addsepitem", "Add Separator",
+								   new BMessage(MSG_MENU_ADD_SEPARATOR));
+	buttonRow->AddView(fAddSeparatorBtn);
+
+	// start out at the size the layout wants
+	ResizeTo(PreferredSize().width, PreferredSize().height);
+}
+//------------------------------------------------------------------------------
+BSize MenuEditor::MaxSize()
+{
+	// grow with the panel's width, but never taller than needed
+	return BSize(B_SIZE_UNLIMITED, PreferredSize().height);
 }
 //------------------------------------------------------------------------------
 void MenuEditor::AttachedToWindow()
 {
-	if (!fInit)
-	{
-		fInit = true;
-		BRect rect(Frame());
-		BRect frame(10, 110, rect.Width() - 10, 130);
-		fLabelText = new BTextControl(frame, "label", "Label: ", "",
-									  new BMessage(MSG_MENU_SET_ITEM_LABEL));
-		fLabelText->SetDivider(be_plain_font->StringWidth("Label: "));
-		fLabelText->SetEnabled(false);
-		AddChild(fLabelText);
-
-		char msg[5];
-		msg[0] = 0;
-		strcpy(msg,"none");
-		/*if (((BControl *)(pointer))->Message() != NULL)
-			strncpy(msg,(char *)(new int32(((BControl *)(pointer))->Message()->what)),4);*/
-
-		frame.Set(10, 130, rect.Width() - 10, 150);
-		fMsgText = new BTextControl(frame, "msg", "Message: ", msg,
-									new BMessage(MSG_MENU_SET_ITEM_MSG));
-		fMsgText->TextView()->SetMaxBytes(4);
-		fMsgText->SetDivider(be_plain_font->StringWidth("Message: "));
-		fMsgText->SetEnabled(false);
-		AddChild(fMsgText);
-
-		frame.Set(10, 150, be_plain_font->StringWidth("Shortcut: ") + 40, 170);
-		fShortcutText = new BTextControl(frame, "shrtct", "Shortcut: ", "",
-										 new BMessage(MSG_MENU_SET_ITEM_SHORTCUT));
-		fShortcutText->SetDivider(be_plain_font->StringWidth("Shortcut: "));
-		fShortcutText->SetEnabled(false);
-		fShortcutText->TextView()->SetMaxBytes(1);
-		AddChild(fShortcutText);
-
-		BMenu *meniu = new BMenu("Modifier Keys");
-		meniu->AddItem(new BMenuItem("Option", new BMessage(MSG_MENU_SET_ITEM_MARKED)));
-		meniu->AddItem(new BMenuItem("Shift", new BMessage(MSG_MENU_SET_ITEM_MARKED)));
-		meniu->AddItem(new BMenuItem("Control", new BMessage(MSG_MENU_SET_ITEM_MARKED)));
-		frame.Set(be_plain_font->StringWidth("Shortcut: ") + 50, 150,
-					rect.Width() - 10, 170);
-		fModifierField = new BMenuField(frame, "modchoice", NULL, meniu);
-		fModifierField->SetEnabled(false);
-		meniu->SetRadioMode(false);
-		meniu->SetLabelFromMarked(false);
-		AddChild(fModifierField);
-
-		frame.Set(10, 175, rect.Width() - 10, 195);
-		fEnabledBox = new BCheckBox(frame, "enabled", "Enabled",
-									new BMessage(MSG_MENU_SET_ITEM_ENABLED));
-		fEnabledBox->SetEnabled(false);
-		AddChild(fEnabledBox);
-
-		frame.Set(10, 200, (rect.Width() / 2) - 10, 220);
-		fAddItemBtn = new BButton(frame, "addiantem", "Add Item",
-								  new BMessage(MSG_MENU_NEW_ITEM));
-		AddChild(fAddItemBtn);
-		frame.Set((rect.Width() / 2) + 10, 200, rect.Width() - 10, 220);
-		fAddSeparatorBtn = new BButton(frame, "addsepitem", "Add Separator",
-									   new BMessage(MSG_MENU_ADD_SEPARATOR));
-		AddChild(fAddSeparatorBtn);
-	}
-
 	fListView->SetTarget(this);
 	fLabelText->SetTarget(this);
 	fMsgText->SetTarget(this);
@@ -236,13 +255,14 @@ uint32 MenuEditor::MakeModMask(void)
 BMenuItem* MenuEditor::CurrentItem()
 {
 	int32 index = fListView->FullListCurrentSelection();
-	return ((MenuListItem *)(fListView->FullListItemAt(index)))->item;
+	MenuListItem* listItem = (MenuListItem *)(fListView->FullListItemAt(index));
+	return listItem ? listItem->item : NULL;
 }
 //------------------------------------------------------------------------------
 void MenuEditor::OnSelectionChanged(BMessage* /*msg*/)
 {
-	if ((fListView->CurrentSelection() < 0) ||
-		is_kind_of(CurrentItem(), BSeparatorItem))
+	BMenuItem* current = (fListView->CurrentSelection() < 0) ? NULL : CurrentItem();
+	if (current == NULL || is_kind_of(current, BSeparatorItem))
 	{
 		fLabelText->SetText("");
 		fLabelText->SetEnabled(false);

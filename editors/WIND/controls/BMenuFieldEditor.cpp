@@ -116,9 +116,6 @@ void BMenuFieldEditor::Init()
 	{
 		bottom = Bottom();
 		fMenuEditor = new MenuEditor(BRect(20, bottom, 240, bottom + 230));
-		// keep its height, let the layout have its width
-		fMenuEditor->SetExplicitMaxSize(BSize(B_SIZE_UNLIMITED,
-											  fMenuEditor->Frame().Height()));
 	}
 
 	if (Target())

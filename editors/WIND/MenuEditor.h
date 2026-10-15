@@ -34,6 +34,7 @@ class MenuEditor : public BBox
 		MenuEditor(BRect rect, BMenu* men = NULL);
 
 		void AttachedToWindow();
+		BSize MaxSize();
 		void MessageReceived(BMessage* msg);
 
 		void SetMenu(BMenu* menu);
