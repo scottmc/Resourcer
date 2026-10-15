@@ -33,6 +33,7 @@ class EditingPanel : public BView
 		~EditingPanel();
 
 		void AttachedToWindow();
+		void FrameResized(float width, float height);
 		void MessageReceived(BMessage *msg);
 
 		void SetTo(BMessage* active);
@@ -40,6 +41,8 @@ class EditingPanel : public BView
 		BResources *reso;
 
 	private:
+		void AddNoFocusText();
+		void UpdateScrollBar();
 		void InitEditors();
 		void RegisterEditor(BViewEditor* editor);
 		void CleanupEditors();

@@ -82,6 +82,13 @@ FlagFlipNameLabelQuad WindowFlags[] =
 };
 
 //------------------------------------------------------------------------------
+// Divider for a label: its width plus room so that it isn't cut short
+static float LabelWidth(const char* label)
+{
+	return ceilf(be_plain_font->StringWidth(label)) + 10;
+}
+
+//------------------------------------------------------------------------------
 // The view that holds the window flag checkboxes in a single column.  It sits
 // inside a BScrollView and keeps the vertical scroll bar in step with its size.
 class FlagsContent : public BView
@@ -274,7 +281,7 @@ void WindowEditor::Init()
 	float width = Bounds().Width() - 20;
 	float w, h;
 	fTitleText = new BTextControl(BRect(10,10,10 + width,30),"title","Title: ",fWindowInfo.title.c_str(),new BMessage(MSG_WINDOW_SET_TITLE));
-	fTitleText->SetDivider(be_plain_font->StringWidth("Title: "));
+	fTitleText->SetDivider(LabelWidth("Title: "));
 	fTitleText->GetPreferredSize(&w, &h);
 	fTitleText->ResizeTo(width, h);
 	AddChild(fTitleText);
@@ -294,12 +301,12 @@ float WindowEditor::PreferredWidth()
 	float widest = 0;
 	float w;
 
-	w = be_plain_font->StringWidth("Title: ") +
+	w = LabelWidth("Title: ") +
 		be_plain_font->StringWidth("Untitled Window");
 	if (w > widest)
 		widest = w;
 
-	float label = be_plain_font->StringWidth("Window Look: ");
+	float label = LabelWidth("Window Look: ");
 	for (int i = 0; WindowLooks[i].label; ++i)
 	{
 		w = label + be_plain_font->StringWidth(WindowLooks[i].label) + menuPad;
@@ -307,7 +314,7 @@ float WindowEditor::PreferredWidth()
 			widest = w;
 	}
 
-	label = be_plain_font->StringWidth("Window Behavior: ");
+	label = LabelWidth("Window Behavior: ");
 	for (int i = 0; WindowFeels[i].label; ++i)
 	{
 		w = label + be_plain_font->StringWidth(WindowFeels[i].label) + menuPad;
@@ -387,7 +394,7 @@ void WindowEditor::InitLookMenu()
 	float h = fTitleText->Frame().Height();
 	float top = fTitleText->Frame().bottom + 8;
 	fLookField = new BMenuField(BRect(10,top,Bounds().Width() - 10,top + h),"look","Window Look: ",menu);
-	fLookField->SetDivider(be_plain_font->StringWidth("Window Look: "));
+	fLookField->SetDivider(LabelWidth("Window Look: "));
 	AddChild(fLookField);
 }
 //------------------------------------------------------------------------------
@@ -445,7 +452,7 @@ void WindowEditor::InitFeelMenu()
 	float h = fLookField->Frame().Height();
 	float top = fLookField->Frame().bottom + 8;
 	fFeelField = new BMenuField(BRect(10,top,Bounds().Width() - 10,top + h),"look","Window Behavior: ",menu);
-	fFeelField->SetDivider(be_plain_font->StringWidth("Window Behavior: "));
+	fFeelField->SetDivider(LabelWidth("Window Behavior: "));
 	AddChild(fFeelField);
 }
 //------------------------------------------------------------------------------
@@ -470,8 +477,18 @@ void WindowEditor::InitFlagsBoxes()
 	be_bold_font->GetHeight(&fh);
 	float top = ceilf(fh.ascent + fh.descent) + 6;
 	BRect inner(6, top, work.Width() - 6, work.Height() - 6);
+	// A scroll view is as big as its target plus its scroll bar and border, and
+	// the bar is as wide as the font scales it.  Measure what it adds with a
+	// scroll view for a dummy target, so that the real one comes out exactly
+	// the size of the room.  (Resizing the real one afterwards doesn't work:
+	// before it is attached, its scroll bar stays behind at the old size and
+	// gets cut off.)
+	BView* dummy = new BView(BRect(0, 0, 99, 99), "dummy", B_FOLLOW_ALL_SIDES, 0);
+	BScrollView measure("measure", dummy, B_FOLLOW_NONE, 0, false, true);
+	float extraWidth = measure.Frame().Width() - dummy->Frame().Width();
+	float extraHeight = measure.Frame().Height() - dummy->Frame().Height();
 	FlagsContent* content = new FlagsContent(BRect(0, 0,
-		inner.Width() - B_V_SCROLL_BAR_WIDTH - 3, inner.Height() - 2));
+		inner.Width() - extraWidth, inner.Height() - extraHeight));
 
 	float y = 4;
 	float step = 20;
@@ -498,7 +515,6 @@ void WindowEditor::InitFlagsBoxes()
 	BScrollView* scroller = new BScrollView("flagsscroller", content,
 		B_FOLLOW_ALL_SIDES, 0, false, true);
 	scroller->MoveTo(inner.LeftTop());
-	scroller->ResizeTo(inner.Width(), inner.Height());
 	box->AddChild(scroller);
 #if 0
 	int i = 20;

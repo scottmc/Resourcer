@@ -259,6 +259,31 @@ class CardButtons : public BView
 		BButton		*fButtons[kMaxCards];
 };
 
+// The scroll view around the Focus View panel.  The panel's own layout wants
+// more height than the card has, and a scroll view would pass that on to the
+// card layout as its smallest size, pushing the scroll bar out of the window.
+// Likewise it would pass on the panel's largest size, which for some editors
+// is narrower than the card.
+class FocusScroller : public BScrollView
+{
+	public:
+		FocusScroller(const char *name, BView *target)
+			:	BScrollView(name, target, B_FOLLOW_ALL_SIDES, 0, false, true)
+		{
+		}
+
+		BSize MinSize()
+		{
+			return BSize(50, 50);
+		}
+
+		// Fill the card, whatever the editor's controls would stop at
+		BSize MaxSize()
+		{
+			return BSize(B_SIZE_UNLIMITED, B_SIZE_UNLIMITED);
+		}
+};
+
 // The Elements card.  The list and the instruction text are placed from the
 // panel's own size whenever it changes, instead of relying on follow modes:
 // the card layout and the window resize the panel after it is built, and
@@ -385,7 +410,10 @@ void loaddata(unsigned char* data,size_t length, BView* bkgview)
 
 	editpanel = new EditingPanel;
 	editpanel->ResizeTo(panelwidth,panelheight);
-	cardlayout->AddView(editpanel);
+	// The Focus View editors can have more controls than fit, so the panel
+	// is in a scroll view.
+	BScrollView *editscroller = new FocusScroller("editscroller",editpanel);
+	cardlayout->AddView(editscroller);
 
 	//-------------Init Editable Window------------------
 	if (length == 0)

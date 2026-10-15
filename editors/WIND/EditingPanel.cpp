@@ -18,6 +18,7 @@
 #include <interface/MenuItem.h>
 #include <interface/PopUpMenu.h>
 #include <interface/RadioButton.h>
+#include <interface/ScrollBar.h>
 #include <interface/Slider.h>
 #include <interface/StringView.h>
 #include <interface/TextControl.h>
@@ -55,7 +56,7 @@
 
 //------------------------------------------------------------------------------
 EditingPanel::EditingPanel(void)
-	:	BView(BRect(0, 0, 300, 350), "editpanel", B_FOLLOW_ALL_SIDES, 0),
+	:	BView(BRect(0, 0, 300, 350), "editpanel", B_FOLLOW_ALL_SIDES, B_FRAME_EVENTS),
 		fCurrentEditor(NULL),
 		iscontrol(false),
 		pointer(NULL)
@@ -69,6 +70,55 @@ EditingPanel::EditingPanel(void)
 EditingPanel::~EditingPanel()
 {
 	CleanupEditors();
+}
+//------------------------------------------------------------------------------
+// The text sized to fit, so it isn't cut off at a large font size
+void EditingPanel::AddNoFocusText()
+{
+	BStringView* text = new BStringView(BRect(25, 100, 175, 125), "noactive",
+										"No Focus View");
+	text->ResizeToPreferred();
+	AddChild(text);
+}
+//------------------------------------------------------------------------------
+void EditingPanel::FrameResized(float width, float height)
+{
+	BView::FrameResized(width, height);
+	UpdateScrollBar();
+}
+//------------------------------------------------------------------------------
+// The panel sits in a scroll view when there is one.  The editor's controls can
+// be taller than the panel (more rows, or a bigger font), so the vertical scroll
+// bar covers the height they need.
+void EditingPanel::UpdateScrollBar()
+{
+	BScrollBar* bar = ScrollBar(B_VERTICAL);
+	if (bar == NULL)
+		return;
+
+	float needed = 0;
+	if (GetLayout() != NULL)
+	{
+		needed = GetLayout()->MinSize().height;
+	}
+	else
+	{
+		for (int32 i = 0; i < CountChildren(); ++i)
+		{
+			float bottom = ChildAt(i)->Frame().bottom + 10;
+			if (bottom > needed)
+				needed = bottom;
+		}
+	}
+
+	float visible = Bounds().Height();
+	float range = needed - visible;
+	if (range < 0)
+		range = 0;
+	bar->SetRange(0, range);
+	if (needed > 0)
+		bar->SetProportion(visible / needed);
+	bar->SetSteps(be_plain_font->Size() * 1.5, visible > 20 ? visible - 20 : visible);
 }
 //------------------------------------------------------------------------------
 void EditingPanel::AttachedToWindow()
@@ -120,6 +170,9 @@ void EditingPanel::MessageReceived(BMessage *msg)
 void EditingPanel::SetTo(BMessage* active)
 {
 	BAutolock locker(Window());
+
+	// start at the top again for the new editor
+	ScrollTo(0, 0);
 	for (BView* dead = ChildAt(0); dead != NULL; dead = ChildAt(0))
 	{
 		RemoveChild(dead);
@@ -174,11 +227,13 @@ void EditingPanel::SetTo(BMessage* active)
 
 	if (!active || !view)
 	{
-		AddChild(new BStringView(BRect(25, 100, 175, 125), "noactive",
-								 "No Focus View"));
+		AddNoFocusText();
 		fCurrentEditor = NULL;
+		UpdateScrollBar();
 		return;
 	}
+
+	UpdateScrollBar();
 }
 //------------------------------------------------------------------------------
 void EditingPanel::InitEditors()
