@@ -53,9 +53,12 @@ and an ASCII view of the data.
 | Interface and media | `WIND` window layout, `MOOV` movie, `nois` sound |
 | Images | `GIF` `JPEG` `PNG` `PPM` `TGA` `BMP` `TIFF` `WebP` `PSD` `AVIF` `ICNS` `ICO` `PCX` `JP2` `SGI` `WBI` `RAWI` |
 
-`SIZT`, `SSZT` and `OFFT` are edited as 4 byte values. On 64 bit Haiku the real
-types are 8 bytes wide, so a value stored that way isn't shown in full. The
-Resource menu's Open with Generic Editor shows all of the bytes.
+`SIZT`, `SSZT` and `OFFT` are 4 bytes wide when written by 32 bit Haiku or BeOS
+and 8 bytes wide on 64 bit Haiku. The editor goes by the length of the data: 4 or
+8 bytes is edited and saved at that width, and a new resource gets the width of
+the type on the machine Resourcer runs on. A value that does not fit is refused
+rather than cut short. Data of any other length is left as it is, use Open with
+Generic Editor from the Resource menu for those.
 
 ### Images
 

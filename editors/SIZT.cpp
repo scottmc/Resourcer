@@ -1,12 +1,5 @@
 //------------Includes----------------------
-#include <image.h>
-#include <interface/Window.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <interface/TextControl.h>
-#include <interface/GridLayout.h>
-#include <interface/LayoutItem.h>
-#include <interface/SpaceLayoutItem.h>
+#include "wideint.h"
 //-------------------------------------------
 
 extern "C" _EXPORT void loaddata(unsigned char *,size_t,BView *);
@@ -14,60 +7,14 @@ extern "C" _EXPORT unsigned char* savedata(size_t *,BView *);
 extern "C" _EXPORT void messaging(BMessage *,BView *);
 extern "C" _EXPORT const char description[] = "size_t Value";
 
-
-void loaddata(unsigned char *data,size_t length,BView *bkgview) {//runs when add-on starts, window is initialized, you are expected to write to it: rect is 300 x 300
-	char mime[256];
-	if (length == 0) {
-		mime[0] = '0';
-		mime[1] = 0;
-	} else {
-		uint32 dataa;
-		dataa = *(uint32 *)(data);
-		sprintf(mime,"%lu",(unsigned long)dataa);
-	}
-	//	The layout manager sizes the label and field from the current font.
-	BTextControl *v = new BTextControl("Integer","Data:",mime,NULL);
-	BGridLayout *grid = new BGridLayout(8,4);
-	bkgview->SetLayout(grid);
-	grid->SetInsets(10,10,10,10);
-	grid->AddItem(v->CreateLabelLayoutItem(),0,0);
-	//	Room for the longest value this type can have, so it is never clipped
-	BLayoutItem *field = v->CreateTextViewLayoutItem();
-	field->SetExplicitMinSize(BSize(be_plain_font->StringWidth("-9223372036854775808") + 24,B_SIZE_UNSET));
-	field->SetExplicitPreferredSize(BSize(be_plain_font->StringWidth("-9223372036854775808") + 24,B_SIZE_UNSET));
-	grid->AddItem(field,1,0);
-	grid->AddItem(BSpaceLayoutItem::CreateGlue(),0,1,2,1);
-	//	The host window is not layout managed, so size it to the content.
-	//	Ask for the minimum size first: the preferred size can come back as NaN
-	//	until the layout is validated, so the tests are written to replace a NaN.
-	BSize min = bkgview->MinSize();
-	BSize size = bkgview->PreferredSize();
-	if (!(size.width >= min.width))
-		size.width = min.width;
-	if (!(size.height >= min.height))
-		size.height = min.height;
-	bkgview->Window()->ResizeTo(size.width > 220 ? size.width : 220,size.height);
+//	The width comes from the data, a new resource gets the width of the type here
+void loaddata(unsigned char *data,size_t length,BView *bkgview) {
+	wide_load(data,length,bkgview,sizeof(size_t),false);
 }
 
-unsigned char* savedata(size_t *length,BView *bkgview) { //return data, clean up, and set length to the size of data
-	BTextControl *text = (BTextControl *)(bkgview->FindView("Integer"));
-	//char *toreturn = new char[4];
-	uint32 *data = new uint32;
-	int64 datab = strtoll(text->Text(),NULL,10);
-	if (datab < 0)
-		datab = 0;
-	*data = datab;
-	//char *one = (char *)(&data);
-	//char *two = one + 1;
-	//char *three = two + 1;
-	//char *four = three + 1;
-	//toreturn[0] = *one;
-	//toreturn[1] = *two;
-	//toreturn[2] = *three;
-	//toreturn[3] = *four;
-	*length = 4;
-	return (unsigned char*)(data);
+unsigned char* savedata(size_t *length,BView *bkgview) {
+	return wide_save(length,bkgview);
 }
 
-void messaging(BMessage *message,BView *bkgview) { //receives messages from window with negative 'what' members or B_REFS_RECEIVED messages
+void messaging(BMessage *message,BView *bkgview) {
 }
