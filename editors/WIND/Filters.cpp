@@ -4,6 +4,7 @@
 //------------------------------------------------------------------------------
 
 // Standard Includes -----------------------------------------------------------
+#include <string.h>
 
 // System Includes -------------------------------------------------------------
 #include <app/AppDefs.h>
@@ -85,12 +86,31 @@ filter_result DropFilter::Filter(BMessage* msg,BHandler** /*target*/)
 	if (message == NULL)
 		return B_DISPATCH_MESSAGE;
 
+	// BSlider's archive constructor calls ResizeToPreferred() before it has
+	// initialized its cached size, so the new slider gets a random height
+	// (invisible or clipped sliders). With B_SUPPORTS_LAYOUT set it skips that
+	// call; the flag is removed again right after the slider is built.
+	bool isSlider = false;
+	const char* className = NULL;
+	if (message->FindString("class", &className) == B_OK && className != NULL &&
+		strcmp(className, "BSlider") == 0)
+	{
+		int32 flags = 0;
+		if (message->FindInt32("_flags", &flags) == B_OK)
+		{
+			message->ReplaceInt32("_flags", flags | B_SUPPORTS_LAYOUT);
+			isSlider = true;
+		}
+	}
+
 	BView *controlled;
 	// TODO: add some real error handling
 	image_id me;
 	controlled = cast_as(instantiate_object(message, &me), BView);
 	if (controlled == NULL)
 		return B_DISPATCH_MESSAGE;
+	if (isSlider)
+		controlled->SetFlags(controlled->Flags() & ~B_SUPPORTS_LAYOUT);
 	controlled->MoveTo(point);
 	((BWindow *)(Looper()))->AddChild(controlled);
 	if (controlled->Window() == NULL)

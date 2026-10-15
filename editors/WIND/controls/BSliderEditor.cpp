@@ -13,7 +13,7 @@
 #include <interface/MenuItem.h>
 #include <interface/PopUpMenu.h>
 #include <interface/RadioButton.h>
-//#include <interface/Slider.h>
+#include <interface/Slider.h>
 #include <interface/TextControl.h>
 
 #include <support/String.h>
@@ -22,7 +22,6 @@
 
 // Local Includes --------------------------------------------------------------
 #include "BSliderEditor.h"
-#include "ModSlider.h"
 #include "WIND.h"
 
 // Local Defines ---------------------------------------------------------------
@@ -593,13 +592,6 @@ void BSliderEditor::SetOrientation(int32 orient)
 }
 //------------------------------------------------------------------------------
 
-//------------------------------------------------------------------------------
-void BSlider::SetLimits(int32 minimum, int32 maximum)
-{
-	fMinValue = minimum;
-	fMaxValue = maximum;
-	Invalidate();
-}
 //------------------------------------------------------------------------------
 
 
